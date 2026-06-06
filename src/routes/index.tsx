@@ -1,6 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Search, ChevronRight, User, UserPlus, Phone, Globe } from "lucide-react";
+import {
+  Search,
+  ChevronRight,
+  User,
+  UserPlus,
+  Phone,
+  Globe,
+  Mail,
+  MapPin,
+  Linkedin,
+  Youtube,
+  Twitter,
+  ShieldCheck,
+  Truck,
+  Factory,
+  CreditCard,
+} from "lucide-react";
 import asphalt from "@/assets/asphalt-plant.jpg";
 import concrete from "@/assets/concrete-plant.jpg";
 import catConcrete from "@/assets/cat-concrete.jpg";
