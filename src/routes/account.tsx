@@ -8,9 +8,14 @@ import {
   getCustomerAuthStatus,
   logoutCustomer,
 } from "@/lib/api/customer-account.functions";
+import {
+  getShopifyCustomer,
+  logoutShopifyCustomer,
+} from "@/lib/api/shopify.functions";
 
 type AuthStatus = Awaited<ReturnType<typeof getCustomerAuthStatus>>;
 type CustomerProfile = Awaited<ReturnType<typeof getCustomerAccountProfile>>;
+type StorefrontCustomer = Awaited<ReturnType<typeof getShopifyCustomer>>;
 
 export const Route = createFileRoute("/account")({
   component: AccountPage,
@@ -19,6 +24,7 @@ export const Route = createFileRoute("/account")({
 function AccountPage() {
   const [status, setStatus] = useState<AuthStatus | null>(null);
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
+  const [storefrontCustomer, setStorefrontCustomer] = useState<StorefrontCustomer>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,6 +35,9 @@ function AccountPage() {
         if (nextStatus.loggedIn) {
           setProfile(await getCustomerAccountProfile());
         }
+        
+        const sfCustomer = await getShopifyCustomer();
+        setStorefrontCustomer(sfCustomer);
       } finally {
         setLoading(false);
       }
@@ -39,10 +48,19 @@ function AccountPage() {
 
   async function handleLogout() {
     await logoutCustomer();
+    await logoutShopifyCustomer();
     window.location.href = "/";
   }
 
-  const displayName = profile?.displayName || [profile?.firstName, profile?.lastName].filter(Boolean).join(" ");
+  const displayName =
+    storefrontCustomer?.displayName ||
+    storefrontCustomer?.firstName ||
+    profile?.displayName ||
+    [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") ||
+    "Customer Account";
+  const email = storefrontCustomer?.email || profile?.email;
+
+  const isLoggedIn = storefrontCustomer || status?.loggedIn;
 
   return (
     <div className="min-h-screen bg-background text-ink">
@@ -61,24 +79,7 @@ function AccountPage() {
           <div className="border border-rule bg-surface px-8 py-16 text-center font-mono text-[10px] uppercase tracking-[0.25em] text-ink-muted">
             Loading account
           </div>
-        ) : !status?.configured ? (
-          <section className="border border-rule bg-surface p-8">
-            <ShieldCheck className="mb-5 h-8 w-8 text-accent" />
-            <h2 className="font-display text-2xl font-bold uppercase tracking-tight">
-              Customer Account API setup needed
-            </h2>
-            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ink-muted">
-              Add the missing environment variables before customer login and account pages can run.
-            </p>
-            <div className="mt-6 border border-rule bg-background p-4 font-mono text-[11px] uppercase tracking-[0.12em]">
-              {status?.missing.map((name) => (
-                <div key={name} className="py-1">
-                  {name}
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : !status.loggedIn ? (
+        ) : !isLoggedIn ? (
           <section className="border border-rule bg-surface p-8">
             <User className="mb-5 h-8 w-8 text-accent" />
             <h2 className="font-display text-2xl font-bold uppercase tracking-tight">
@@ -101,17 +102,18 @@ function AccountPage() {
                 <User className="h-5 w-5" />
               </div>
               <h2 className="font-display text-2xl font-bold uppercase tracking-tight">
-                {displayName || "Customer Account"}
+                {displayName}
               </h2>
-              <p className="mt-3 text-sm text-ink-muted">
-                {profile?.email ?? "Signed in with Shopify Customer Accounts"}
-              </p>
-              {!status.hasProfileApi ? (
-                <p className="mt-5 max-w-2xl text-sm leading-relaxed text-ink-muted">
-                  Add `SHOPIFY_CUSTOMER_ACCOUNT_API_URL` to show live profile details and order data
-                  from Shopify.
+              {email && (
+                <p className="mt-3 text-sm text-ink-muted">
+                  {email}
                 </p>
-              ) : null}
+              )}
+              {storefrontCustomer?.phone && (
+                <p className="mt-2 text-sm text-ink-muted">
+                  {storefrontCustomer.phone}
+                </p>
+              )}
             </section>
 
             <aside className="space-y-4">

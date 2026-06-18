@@ -2,11 +2,20 @@ import { Link } from "@tanstack/react-router";
 import { Globe, Phone, Search, ShoppingCart, User, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { getShopifyCart } from "@/lib/api/shopify.functions";
+import { getShopifyCart, getShopifyCustomer } from "@/lib/api/shopify.functions";
 import { getStoredCartId } from "@/lib/shopify/cart";
 
 export function SiteHeader() {
   const [cartCount, setCartCount] = useState(0);
+  const [customer, setCustomer] = useState<{
+    id: string;
+    displayName?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -25,7 +34,19 @@ export function SiteHeader() {
       }
     }
 
+    async function checkAuth() {
+      try {
+        const c = await getShopifyCustomer();
+        if (mounted) setCustomer(c);
+      } catch {
+        if (mounted) setCustomer(null);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
     refreshCartCount();
+    checkAuth();
     window.addEventListener("shopify-cart-updated", refreshCartCount);
     return () => {
       mounted = false;
@@ -46,20 +67,34 @@ export function SiteHeader() {
             </span>
           </div>
           <div className="flex items-center gap-6">
-            <Link
-              to="/login"
-              className="flex items-center gap-1.5 text-white/70 transition-colors hover:text-accent"
-            >
-              <User className="h-3 w-3" /> Sign In
-            </Link>
+            {customer ? (
+              <Link
+                to="/account"
+                className="flex items-center gap-1.5 text-white/70 transition-colors hover:text-accent"
+              >
+                <User className="h-3 w-3" />{" "}
+                {customer.firstName || customer.displayName || "Account"}
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="flex items-center gap-1.5 text-white/70 transition-colors hover:text-accent"
+              >
+                <User className="h-3 w-3" /> Sign In
+              </Link>
+            )}
             <span className="h-3 w-px bg-white/15" />
-            <Link
-              to="/register"
-              className="flex items-center gap-1.5 text-white/70 transition-colors hover:text-accent"
-            >
-              <UserPlus className="h-3 w-3" /> Register
-            </Link>
-            <span className="h-3 w-px bg-white/15" />
+            {!customer && (
+              <>
+                <Link
+                  to="/register"
+                  className="flex items-center gap-1.5 text-white/70 transition-colors hover:text-accent"
+                >
+                  <UserPlus className="h-3 w-3" /> Register
+                </Link>
+                <span className="h-3 w-px bg-white/15" />
+              </>
+            )}
             <Link
               to="/cart"
               className="flex items-center gap-1.5 text-white/70 transition-colors hover:text-accent"

@@ -39,6 +39,11 @@ type CustomerCreateInput = {
   acceptsMarketing?: boolean;
 };
 
+type CustomerAccessTokenCreateInput = {
+  email: string;
+  password: string;
+};
+
 function assertCartMutation(cart: ShopifyCart | null, errors: CartUserError[] = []) {
   if (errors.length) {
     throw new Error(errors.map((error) => error.message).join("; "));
@@ -300,4 +305,64 @@ export async function createCustomer(input: CustomerCreateInput) {
   );
 
   return data.customerCreate;
+}
+
+export async function createCustomerAccessToken(input: CustomerAccessTokenCreateInput) {
+  const data = await shopifyStorefront<{
+    customerAccessTokenCreate: {
+      customerAccessToken?: {
+        accessToken: string;
+        expiresAt: string;
+      } | null;
+      customerUserErrors: CustomerUserError[];
+    };
+  }>(
+    `#graphql
+      mutation CustomerAccessTokenCreate($input: CustomerAccessTokenCreateInput!) {
+        customerAccessTokenCreate(input: $input) {
+          customerAccessToken {
+            accessToken
+            expiresAt
+          }
+          customerUserErrors {
+            code
+            field
+            message
+          }
+        }
+      }
+    `,
+    { input },
+  );
+
+  return data.customerAccessTokenCreate;
+}
+
+export async function getCustomer(customerAccessToken: string) {
+  const data = await shopifyStorefront<{
+    customer?: {
+      id: string;
+      displayName?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+      email?: string | null;
+      phone?: string | null;
+    } | null;
+  }>(
+    `#graphql
+      query Customer($customerAccessToken: String!) {
+        customer(customerAccessToken: $customerAccessToken) {
+          id
+          displayName
+          firstName
+          lastName
+          email
+          phone
+        }
+      }
+    `,
+    { customerAccessToken },
+  );
+
+  return data.customer;
 }
