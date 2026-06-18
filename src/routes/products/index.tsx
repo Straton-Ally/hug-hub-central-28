@@ -137,8 +137,8 @@ function ProductsCataloguePage() {
             ALL PRODUCTS <span className="text-accent">CATALOGUE</span>
           </h1>
           <p className="mt-8 max-w-2xl text-[16px] leading-relaxed text-white/60">
-            Browse every product published from Shopify to the Headless sales channel. Filter by
-            vertical, availability, part text, manufacturer, SKU-related tags, or price order.
+            Browse our full product catalogue. Filter by category, availability, search terms, or
+            sort by price.
           </p>
         </div>
       </section>
@@ -260,13 +260,12 @@ function ProductsCataloguePage() {
               ))}
             </div>
           ) : (
-            <div className="mt-6 border border-dashed border-rule bg-surface px-8 py-16 text-center">
-              <h2 className="font-display text-2xl font-bold uppercase tracking-tight">
+            <div className="mt-6 border border-dashed border-rule bg-surface px-4 py-10 md:px-8 md:py-16 text-center">
+              <h2 className="font-display text-xl md:text-2xl font-bold uppercase tracking-tight">
                 No products match these filters
               </h2>
-              <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-ink-muted">
-                Clear the search term or switch to All Products. Shopify products must be active
-                and published to the Headless sales channel to appear here.
+              <p className="mx-auto mt-3 md:mt-4 max-w-xl text-sm leading-relaxed text-ink-muted">
+                Clear the search term, adjust filters, or browse other categories.
               </p>
               <button
                 type="button"
@@ -276,7 +275,7 @@ function ProductsCataloguePage() {
                   setAvailability("all");
                   setSort("newest");
                 }}
-                className="mt-8 inline-flex h-11 items-center justify-center bg-accent px-6 font-mono text-[10px] uppercase tracking-[0.22em] text-accent-foreground"
+                className="mt-6 md:mt-8 inline-flex h-11 items-center justify-center bg-accent px-6 font-mono text-[10px] uppercase tracking-[0.22em] text-accent-foreground"
               >
                 Reset Filters
               </button>

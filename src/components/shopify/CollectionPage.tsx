@@ -94,12 +94,10 @@ export function CollectionPage({
                 <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
               </div>
               <h3 className="font-display text-xl md:text-2xl font-bold uppercase tracking-tight">
-                No Products found
+                No products in this category
               </h3>
               <p className="mx-auto mt-3 md:mt-4 max-w-2xl text-sm leading-relaxed text-ink-muted">
-                Create a Shopify collection with handle{" "}
-                <span className="font-mono text-ink">{expectedHandle}</span>, add active products,
-                and publish them to the Headless sales channel. They will appear here automatically.
+                Browse our other categories for available products.
               </p>
             </div>
           )}

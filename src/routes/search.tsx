@@ -30,7 +30,7 @@ function SearchPage() {
       title={q ? `RESULTS / ${q}` : "SHOPIFY / SEARCH"}
       image={automation}
       imageAlt="Industrial automation search"
-      intro="Search results are pulled directly from Shopify products published to the Headless sales channel."
+      intro="Find the parts you need with our search tool."
       collection={null}
       fallbackProducts={products}
       expectedHandle="search"
