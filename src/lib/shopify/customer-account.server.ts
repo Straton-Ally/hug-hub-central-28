@@ -154,7 +154,7 @@ export async function completeCustomerAuthorization(code: string, state: string)
   if (!expectedState || !codeVerifier || expectedState !== state) {
     return {
       ok: false as const,
-      error: "Your Shopify login session expired. Please start sign in again.",
+      error: "Your login session expired. Please start sign in again.",
     };
   }
 
@@ -178,7 +178,7 @@ export async function completeCustomerAuthorization(code: string, state: string)
   if (!response.ok) {
     return {
       ok: false as const,
-      error: "Shopify could not complete this customer login.",
+      error: "Secure customer login could not be completed.",
     };
   }
 

@@ -13,11 +13,25 @@ export type ShopifyImage = {
 export type ShopifyVariant = {
   id: string;
   title: string;
+  sku: string | null;
   availableForSale: boolean;
   quantityAvailable: number | null;
   price: ShopifyMoney;
   compareAtPrice: ShopifyMoney | null;
   selectedOptions: Array<{ name: string; value: string }>;
+};
+
+export type ShopifyProductResourceLink = {
+  label: string;
+  url: string;
+};
+
+export type ShopifyProductTechnicalDetails = {
+  brand: string | null;
+  mpnRange: string | null;
+  setupVideoUrl: string | null;
+  datasheets: ShopifyProductResourceLink[];
+  manuals: ShopifyProductResourceLink[];
 };
 
 export type ShopifyProduct = {
@@ -32,6 +46,7 @@ export type ShopifyProduct = {
   tags: string[];
   featuredImage: ShopifyImage | null;
   images: ShopifyImage[];
+  technicalDetails: ShopifyProductTechnicalDetails;
   priceRange: {
     minVariantPrice: ShopifyMoney;
     maxVariantPrice: ShopifyMoney;

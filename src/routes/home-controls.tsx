@@ -5,14 +5,22 @@ import { getCollection, getLatestProducts } from "@/lib/api/shopify.functions";
 import homeImg from "@/assets/cat-home.jpg";
 
 const collectionHandle = "home-controls";
+const productLines = [
+  { slug: "relays", label: "Relays", keywords: ["relay", "module"] },
+  { slug: "sensors", label: "Sensors", keywords: ["sensor", "temperature", "hvac"] },
+  { slug: "power-supplies", label: "Power Supplies", keywords: ["power", "supply", "24v", "din"] },
+];
 
 export const Route = createFileRoute("/home-controls")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    line: typeof search.line === "string" ? search.line : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Home Controls | Spares Automation" },
       {
         name: "description",
-        content: "Live Shopify collection for home controls and automation products.",
+        content: "Product range for home controls and automation products.",
       },
     ],
   }),
@@ -30,6 +38,7 @@ export const Route = createFileRoute("/home-controls")({
 
 function HomeControlsPage() {
   const { collection, products } = Route.useLoaderData();
+  const { line } = Route.useSearch();
 
   return (
     <CollectionPage
@@ -37,10 +46,12 @@ function HomeControlsPage() {
       title="HOME / CONTROLS"
       image={homeImg}
       imageAlt="Home controls"
-      intro="Advanced automation for residential and light commercial environments, synced from Shopify."
+      intro="Advanced automation for residential and light commercial environments."
       collection={collection}
       fallbackProducts={products}
       expectedHandle={collectionHandle}
+      productLines={productLines}
+      activeLine={line}
     />
   );
 }

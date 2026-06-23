@@ -3,6 +3,7 @@ import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { SiteHeader } from "@/components/shopify/SiteHeader";
+import { SiteFooter } from "@/components/shopify/SiteFooter";
 import {
   getShopifyCart,
   removeShopifyCartLine,
@@ -76,10 +77,10 @@ function CartPage() {
         <div className="mb-6 md:mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
-              Shopify Checkout
+              Secure Checkout
             </div>
             <h1 className="mt-2 font-display text-2xl md:text-3xl lg:text-4xl font-extrabold uppercase tracking-tight">
-              Trade Cart
+              Cart
             </h1>
           </div>
           <Link
@@ -103,8 +104,7 @@ function CartPage() {
               Your cart is empty
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-ink-muted">
-              Add products from any Shopify-powered collection, then complete payment and shipping
-              through Shopify checkout.
+              Add products from any category, then complete payment and shipping through checkout.
             </p>
           </div>
         ) : (
@@ -139,8 +139,9 @@ function CartPage() {
                     >
                       {line.merchandise.product.title}
                     </Link>
-                    <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
                       {line.merchandise.title}
+                      {line.merchandise.sku ? ` / ${line.merchandise.sku}` : ""}
                     </div>
                     <div className="mt-4 md:mt-5 flex flex-wrap items-center gap-2">
                       <button
@@ -213,13 +214,14 @@ function CartPage() {
                 Checkout
               </a>
               <p className="mt-4 text-xs leading-relaxed text-ink-muted">
-                Shipping, taxes, discounts, payments, and order creation are handled securely by
-                Shopify.
+                Shipping, taxes, discounts, payments, and order creation are handled securely at
+                checkout.
               </p>
             </aside>
           </div>
         )}
       </main>
+      <SiteFooter />
     </div>
   );
 }

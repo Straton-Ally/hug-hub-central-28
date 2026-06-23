@@ -6,9 +6,15 @@ type Connection<T> = {
   nodes: T[];
 };
 
-type ProductConnectionShape = Omit<ShopifyProduct, "variants" | "images"> & {
+type ProductConnectionShape = Omit<ShopifyProduct, "variants" | "images" | "technicalDetails"> & {
   variants: Connection<ShopifyProduct["variants"][number]>;
   images?: Connection<ShopifyProduct["images"][number]>;
+  metafields?: Array<{
+    namespace: string;
+    key: string;
+    value: string;
+    type: string;
+  } | null>;
 };
 
 type CollectionConnectionShape = Omit<ShopifyCollection, "products"> & {
@@ -49,9 +55,55 @@ function assertCartMutation(cart: ShopifyCart | null, errors: CartUserError[] = 
     throw new Error(errors.map((error) => error.message).join("; "));
   }
   if (!cart) {
-    throw new Error("Shopify did not return a cart.");
+    throw new Error("The cart could not be loaded.");
   }
   return cart;
+}
+
+function parseResourceLinks(value?: string | null) {
+  if (!value) return [];
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    const values = Array.isArray(parsed) ? parsed : [parsed];
+    return values
+      .map((item, index) => {
+        if (typeof item === "string") {
+          return { label: `Resource ${index + 1}`, url: item };
+        }
+        if (item && typeof item === "object") {
+          const record = item as Record<string, unknown>;
+          const url = typeof record.url === "string" ? record.url : "";
+          const label =
+            typeof record.label === "string"
+              ? record.label
+              : typeof record.name === "string"
+                ? record.name
+                : `Resource ${index + 1}`;
+          return url ? { label, url } : null;
+        }
+        return null;
+      })
+      .filter((link): link is { label: string; url: string } => Boolean(link?.url));
+  } catch {
+    return [{ label: "Resource", url: value }];
+  }
+}
+
+function normalizeTechnicalDetails(product: ProductConnectionShape) {
+  const metafields = new Map(
+    (product.metafields ?? [])
+      .filter((field): field is NonNullable<typeof field> => Boolean(field))
+      .map((field) => [field.key, field.value]),
+  );
+
+  return {
+    brand: metafields.get("brand") ?? product.vendor ?? null,
+    mpnRange: metafields.get("mpn_range") ?? product.variants.nodes[0]?.sku ?? null,
+    setupVideoUrl: metafields.get("setup_video_url") ?? null,
+    datasheets: parseResourceLinks(metafields.get("datasheets")),
+    manuals: parseResourceLinks(metafields.get("manuals")),
+  };
 }
 
 function normalizeProduct(product: ProductConnectionShape): ShopifyProduct {
@@ -59,6 +111,7 @@ function normalizeProduct(product: ProductConnectionShape): ShopifyProduct {
     ...product,
     variants: product.variants.nodes,
     images: product.images?.nodes ?? [],
+    technicalDetails: normalizeTechnicalDetails(product),
   };
 }
 

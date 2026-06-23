@@ -12,7 +12,7 @@ export const Route = createFileRoute("/new-arrivals")({
       { title: "New Arrivals | Spares Automation" },
       {
         name: "description",
-        content: "Latest Shopify products and industrial spare updates.",
+        content: "Latest industrial spare updates and new product arrivals.",
       },
     ],
   }),
@@ -33,11 +33,11 @@ function NewArrivalsPage() {
 
   return (
     <CollectionPage
-      eyebrow="Catalogue / Latest / Shopify"
+      eyebrow="Catalogue / Latest"
       title="NEW ARRIVALS"
       image={arrivals}
       imageAlt="New arrivals"
-      intro="The latest additions to the Shopify catalogue. Use a new-arrivals collection for manual control, or the site will show newest products."
+      intro="The latest additions to the catalogue and recently listed industrial spares."
       collection={collection}
       fallbackProducts={products}
       expectedHandle={collectionHandle}

@@ -27,7 +27,7 @@ function AuthCallbackPage() {
       }
 
       if (!code || !state) {
-        setError("Shopify did not return the customer login code.");
+        setError("The secure login provider did not return the customer login code.");
         return;
       }
 
@@ -40,7 +40,7 @@ function AuthCallbackPage() {
         }
         setError(
           "error" in result
-            ? (result.error ?? "Shopify could not complete this customer login.")
+            ? (result.error ?? "Secure customer login could not be completed.")
             : `Missing env: ${result.missing.join(", ")}`,
         );
       } catch {
@@ -62,7 +62,7 @@ function AuthCallbackPage() {
           {error ? (
             <>
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
-                Shopify Customer Account
+                Customer Account
               </div>
               <h1 className="mt-3 font-display text-3xl font-extrabold uppercase tracking-tight">
                 Login could not finish
@@ -83,7 +83,7 @@ function AuthCallbackPage() {
               <h1 className="mt-6 font-display text-3xl font-extrabold uppercase tracking-tight">
                 Completing secure login
               </h1>
-              <p className="mt-4 text-sm text-ink-muted">Connecting your Shopify customer account.</p>
+              <p className="mt-4 text-sm text-ink-muted">Connecting your customer account.</p>
             </>
           )}
         </section>

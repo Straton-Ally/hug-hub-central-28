@@ -26,8 +26,8 @@ function SearchPage() {
 
   return (
     <CollectionPage
-      eyebrow="Search / Shopify Catalogue"
-      title={q ? `RESULTS / ${q}` : "SHOPIFY / SEARCH"}
+      eyebrow="Search / Catalogue"
+      title={q ? `RESULTS / ${q}` : "CATALOGUE / SEARCH"}
       image={automation}
       imageAlt="Industrial automation search"
       intro="Find the parts you need with our search tool."

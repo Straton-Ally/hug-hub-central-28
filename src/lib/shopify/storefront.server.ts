@@ -22,7 +22,7 @@ export async function shopifyStorefront<T>(
 
   if (!domain || !token) {
     throw new Error(
-      "Missing Shopify credentials. Set SHOPIFY_STORE_DOMAIN and a Storefront API token.",
+      "Missing catalogue credentials. Check the store domain and API token configuration.",
     );
   }
 
@@ -42,12 +42,12 @@ export async function shopifyStorefront<T>(
   if (!response.ok || payload.errors?.length) {
     const message =
       payload.errors?.map((error) => error.message).join("; ") ||
-      `Shopify Storefront API request failed with ${response.status}`;
+      `Catalogue request failed with ${response.status}`;
     throw new Error(message);
   }
 
   if (!payload.data) {
-    throw new Error("Shopify Storefront API returned no data.");
+    throw new Error("The catalogue returned no data.");
   }
 
   return payload.data;

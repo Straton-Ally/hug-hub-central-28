@@ -2,8 +2,15 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 
 import { ProductCard } from "@/components/shopify/ProductCard";
+import { SiteFooter } from "@/components/shopify/SiteFooter";
 import { SiteHeader } from "@/components/shopify/SiteHeader";
 import type { ShopifyCollection, ShopifyProduct } from "@/lib/shopify/types";
+
+export type ProductLineFilter = {
+  slug: string;
+  label: string;
+  keywords: string[];
+};
 
 type CollectionPageProps = {
   eyebrow: string;
@@ -15,6 +22,8 @@ type CollectionPageProps = {
   collection: ShopifyCollection | null;
   fallbackProducts?: ShopifyProduct[];
   expectedHandle: string;
+  productLines?: ProductLineFilter[];
+  activeLine?: string;
 };
 
 export function CollectionPage({
@@ -27,8 +36,12 @@ export function CollectionPage({
   collection,
   fallbackProducts = [],
   expectedHandle,
+  productLines = [],
+  activeLine,
 }: CollectionPageProps) {
   const products = collection?.products ?? fallbackProducts;
+  const selectedLine = productLines.find((line) => line.slug === activeLine);
+  const visibleProducts = selectedLine ? products.filter((product) => matchesLine(product, selectedLine)) : products;
   const accentClass = accent === "amber" ? "text-amber" : "text-accent";
   const bgAccentClass = accent === "amber" ? "bg-amber" : "bg-accent";
 
@@ -62,7 +75,7 @@ export function CollectionPage({
         <div className="mx-auto flex max-w-[1600px] flex-col gap-3 md:gap-4 px-4 md:px-6 py-5 md:py-7 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
-              Shopify Collection
+              Product Range
             </div>
             <h2 className="mt-1 md:mt-2 font-display text-xl md:text-2xl font-bold uppercase tracking-tight">
               {collection?.title ?? expectedHandle}
@@ -78,11 +91,46 @@ export function CollectionPage({
         </div>
       </section>
 
+      {productLines.length ? (
+        <section className="border-b border-rule bg-background">
+          <div className="mx-auto max-w-[1600px] px-4 py-4 md:px-6">
+            <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
+              Product lines
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              <a
+                href={`/${expectedHandle}`}
+                className={`shrink-0 border px-4 py-3 font-mono text-[10px] uppercase tracking-[0.18em] transition-colors ${
+                  !selectedLine
+                    ? `${bgAccentClass} border-transparent text-accent-foreground`
+                    : "border-rule bg-surface text-ink-muted hover:border-accent hover:text-accent"
+                }`}
+              >
+                All
+              </a>
+              {productLines.map((line) => (
+                <a
+                  key={line.slug}
+                  href={`/${expectedHandle}?line=${line.slug}`}
+                  className={`shrink-0 border px-4 py-3 font-mono text-[10px] uppercase tracking-[0.18em] transition-colors ${
+                    selectedLine?.slug === line.slug
+                      ? `${bgAccentClass} border-transparent text-accent-foreground`
+                      : "border-rule bg-surface text-ink-muted hover:border-accent hover:text-accent"
+                  }`}
+                >
+                  {line.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="bg-background py-8 md:py-10 lg:py-12">
         <div className="mx-auto max-w-[1600px] px-4 md:px-6">
-          {products.length > 0 ? (
+          {visibleProducts.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 md:gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-              {products.map((product) => (
+              {visibleProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
@@ -103,6 +151,22 @@ export function CollectionPage({
           )}
         </div>
       </section>
+
+      <SiteFooter />
     </div>
   );
+}
+
+function matchesLine(product: ShopifyProduct, line: ProductLineFilter) {
+  const haystack = [
+    product.title,
+    product.productType,
+    product.vendor,
+    product.description,
+    ...product.tags,
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return line.keywords.some((keyword) => haystack.includes(keyword.toLowerCase()));
 }

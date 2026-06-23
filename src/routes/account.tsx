@@ -68,7 +68,7 @@ function AccountPage() {
       <main className="mx-auto max-w-[1200px] px-4 py-8 md:px-6 md:py-12">
         <div className="mb-6 md:mb-8">
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
-            Shopify Customer Account
+            Customer Account
           </div>
           <h1 className="mt-2 font-display text-2xl md:text-3xl lg:text-4xl font-extrabold uppercase tracking-tight">
             Account
@@ -86,7 +86,7 @@ function AccountPage() {
               Sign in to view your trade account
             </h2>
             <p className="mt-3 md:mt-4 max-w-2xl text-sm leading-relaxed text-ink-muted">
-              Customer account access is handled by Shopify, then returned securely to this site.
+              Sign in securely to view your account details, catalogue access, and order history.
             </p>
             <Link
               to="/login"

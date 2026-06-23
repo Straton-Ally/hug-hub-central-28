@@ -49,7 +49,7 @@ export function ProductCard({ product }: ProductCardProps) {
           </h3>
         </Link>
         <p className="mt-2 md:mt-3 line-clamp-3 text-[12px] md:text-[13px] leading-relaxed text-ink-muted">
-          {product.description || "OEM-grade industrial spare available through Shopify inventory."}
+          {product.description || "OEM-grade industrial spare available for online ordering."}
         </p>
         <div className="mt-auto flex items-end justify-between gap-3 md:gap-4 pt-4 md:pt-6">
           <div>

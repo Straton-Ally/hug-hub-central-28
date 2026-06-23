@@ -55,7 +55,7 @@ function LoginPage() {
         message:
           error instanceof Error
             ? error.message
-            : "Shopify could not sign you in.",
+            : "We could not sign you in.",
       });
     } finally {
       setBusy(false);
@@ -92,7 +92,7 @@ function LoginPage() {
             <User className="h-5 w-5" />
           </div>
           <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
-            Shopify Sign In
+            Secure Sign In
           </div>
           <h2 className="mt-2 font-display text-3xl font-extrabold uppercase tracking-tight">
             Existing Customer

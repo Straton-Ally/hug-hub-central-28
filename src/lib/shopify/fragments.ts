@@ -28,6 +28,7 @@ export const PRODUCT_CARD_FRAGMENT = `#graphql
       nodes {
         id
         title
+        sku
         availableForSale
         quantityAvailable
         price {
@@ -59,6 +60,18 @@ export const PRODUCT_DETAIL_FRAGMENT = `#graphql
         width
         height
       }
+    }
+    metafields(identifiers: [
+      { namespace: "custom", key: "brand" }
+      { namespace: "custom", key: "mpn_range" }
+      { namespace: "custom", key: "setup_video_url" }
+      { namespace: "custom", key: "datasheets" }
+      { namespace: "custom", key: "manuals" }
+    ]) {
+      namespace
+      key
+      value
+      type
     }
   }
 `;
@@ -92,6 +105,7 @@ export const CART_FRAGMENT = `#graphql
           ... on ProductVariant {
             id
             title
+            sku
             availableForSale
             quantityAvailable
             price {

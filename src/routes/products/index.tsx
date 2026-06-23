@@ -3,6 +3,7 @@ import { ChevronRight, Filter, Search, SlidersHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ProductCard } from "@/components/shopify/ProductCard";
+import { SiteFooter } from "@/components/shopify/SiteFooter";
 import { SiteHeader } from "@/components/shopify/SiteHeader";
 import { getLatestProducts } from "@/lib/api/shopify.functions";
 import type { ShopifyProduct } from "@/lib/shopify/types";
@@ -43,7 +44,7 @@ const categoryFilters: CategoryFilter[] = [
   {
     label: "New Arrivals",
     handle: "new-arrivals",
-    description: "Recently added Shopify catalogue items",
+    description: "Recently added catalogue items",
   },
 ];
 
@@ -54,7 +55,7 @@ export const Route = createFileRoute("/products/")({
       {
         name: "description",
         content:
-          "Browse all Shopify products across asphalt, concrete, packing, automation and control categories.",
+          "Browse all products across asphalt, concrete, packing, automation and control categories.",
       },
     ],
   }),
@@ -131,14 +132,14 @@ function ProductsCataloguePage() {
         <div className="relative mx-auto w-full max-w-[1600px] px-6 py-20">
           <div className="mb-6 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.3em] text-white/60">
             <span className="h-px w-8 bg-accent" />
-            Shopify Catalogue / Live Products / GBP
+            Product Catalogue / Cart
           </div>
           <h1 className="font-display text-[clamp(2.5rem,6vw,5rem)] font-extrabold uppercase leading-[0.9] tracking-tight text-white">
             ALL PRODUCTS <span className="text-accent">CATALOGUE</span>
           </h1>
           <p className="mt-8 max-w-2xl text-[16px] leading-relaxed text-white/60">
-            Browse our full product catalogue. Filter by category, availability, search terms, or
-            sort by price.
+            Browse the product catalogue. Filter by category, availability, search terms, or sort
+            by price.
           </p>
         </div>
       </section>
@@ -167,7 +168,7 @@ function ProductsCataloguePage() {
                   All Products
                 </span>
                 <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-                  Complete Shopify catalogue
+                Complete catalogue
                 </span>
               </span>
               <ChevronRight className="h-4 w-4 text-accent" />
@@ -295,12 +296,13 @@ function ProductsCataloguePage() {
                 to="/contact-us"
                 className="inline-flex h-11 shrink-0 items-center justify-center border border-white/10 px-5 font-mono text-[10px] uppercase tracking-[0.22em] text-white transition-colors hover:border-accent hover:text-accent"
               >
-                Request Quote
+                Contact Sales
               </Link>
             </div>
           </div>
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }

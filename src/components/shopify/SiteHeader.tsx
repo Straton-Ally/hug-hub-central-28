@@ -61,7 +61,7 @@ export function SiteHeader() {
         <div className="flex h-9 w-full items-center justify-between px-4 font-mono text-[10px] uppercase tracking-[0.18em] md:px-6 md:text-[11px]">
           <div className="flex items-center gap-4 md:gap-6">
             <span className="flex items-center gap-2">
-              <Globe className="h-3 w-3 text-accent" /> UK · EN-GB · GBP
+              <Globe className="h-3 w-3 text-accent" /> UK / EN-GB / GBP
             </span>
             <span className="hidden items-center gap-2 text-white/50 md:flex">
               <Phone className="h-3 w-3" /> +44 (0)161 818 7420
@@ -175,7 +175,7 @@ export function SiteHeader() {
                 SPARES<span className="text-accent">.</span>AUTOMATION
               </div>
               <div className="mt-1 hidden font-mono text-[9px] uppercase tracking-[0.28em] text-white/45 md:block">
-                Industrial Procurement Platform
+                Product catalogue
               </div>
             </div>
           </Link>
@@ -193,7 +193,7 @@ export function SiteHeader() {
                 className="flex-1 bg-transparent font-mono text-[13px] tracking-wide text-white placeholder:text-white/40 focus:outline-none"
               />
               <span className="hidden h-9 items-center border-l border-white/10 px-4 font-mono text-[10px] uppercase tracking-[0.2em] text-white/40 md:flex">
-                ⌘ K
+                Parts search
               </span>
               <button className="flex h-10 items-center gap-2 bg-accent px-4 font-mono text-[11px] uppercase tracking-[0.22em] text-accent-foreground transition-colors hover:bg-accent/90 md:px-6">
                 Search

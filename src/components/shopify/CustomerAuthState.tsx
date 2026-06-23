@@ -32,8 +32,7 @@ export function CustomerAuthState({
         {missing.length ? (
           <>
             <p className="mt-5 max-w-2xl text-sm leading-relaxed text-ink-muted">
-              Add these Customer Account API environment variables, then restart the site. Get them
-              from Shopify Admin under Headless, then Customer Account API.
+              Add these customer account environment variables, then restart the site.
             </p>
             <div className="mt-6 border border-rule bg-background p-4 font-mono text-[11px] uppercase tracking-[0.12em] text-ink">
               {missing.map((name) => (
@@ -47,7 +46,7 @@ export function CustomerAuthState({
           <p className="mt-5 text-sm leading-relaxed text-ink-muted">{error}</p>
         ) : (
           <p className="mt-5 text-sm leading-relaxed text-ink-muted">
-            Redirecting you to Shopify secure customer accounts.
+            Redirecting you to secure customer accounts.
           </p>
         )}
 

@@ -37,6 +37,7 @@ export function AddToCartButton({
             },
           });
           setStoredCartId(cart.id);
+          window.dispatchEvent(new Event("shopify-cart-updated"));
           setStatus("added");
           window.setTimeout(() => setStatus("idle"), 1600);
         } catch (error) {
@@ -54,7 +55,7 @@ export function AddToCartButton({
       {status === "adding"
         ? "Adding"
         : status === "added"
-          ? "Added"
+          ? "Added to cart"
           : status === "error"
             ? "Try Again"
             : (children ?? "Add to Cart")}

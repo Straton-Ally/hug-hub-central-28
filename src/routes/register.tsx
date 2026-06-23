@@ -116,7 +116,7 @@ function RegisterPage() {
 
           <div className="grid gap-4 border-t border-white/10 pt-6 text-sm text-white/55">
             <div>Trade pricing and order access after approval</div>
-            <div>Account details synced into Shopify Customers</div>
+            <div>Secure account details and saved order history</div>
           </div>
         </section>
 

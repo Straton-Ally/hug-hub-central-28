@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { ProductDetail } from "@/components/shopify/ProductDetail";
+import { SiteFooter } from "@/components/shopify/SiteFooter";
 import { SiteHeader } from "@/components/shopify/SiteHeader";
 import { getProduct } from "@/lib/api/shopify.functions";
 
@@ -23,7 +24,7 @@ function ProductPage() {
             Product not found
           </h1>
           <p className="mt-4 text-ink-muted">
-            This product may be inactive, unpublished from Headless, or removed from Shopify.
+            This product may be inactive, unpublished, or removed from the catalogue.
           </p>
           <Link
             to="/"
@@ -32,6 +33,7 @@ function ProductPage() {
             Return to catalogue
           </Link>
         </div>
+        <SiteFooter />
       </div>
     );
   }

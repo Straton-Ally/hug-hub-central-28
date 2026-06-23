@@ -5,14 +5,25 @@ import { getCollection, getLatestProducts } from "@/lib/api/shopify.functions";
 import asphalt from "@/assets/asphalt-plant.jpg";
 
 const collectionHandle = "asphalt";
+const productLines = [
+  { slug: "feeders", label: "Feeders", keywords: ["feeder", "feed", "conveyor", "belt", "scraper"] },
+  { slug: "burner-drying", label: "Burner / Drying", keywords: ["burner", "dryer", "drying", "nozzle", "flame"] },
+  { slug: "bitumen", label: "Bitumen", keywords: ["bitumen", "pump", "valve", "hose"] },
+  { slug: "hot-stone-silos", label: "Hot Stone / Silos", keywords: ["hot", "stone", "silo", "storage", "bin"] },
+  { slug: "baghouse", label: "Baghouse", keywords: ["baghouse", "filter", "bag", "dust"] },
+  { slug: "mixing-tower", label: "Mixing Tower", keywords: ["mixing", "mixer", "tower", "liner", "drum"] },
+];
 
 export const Route = createFileRoute("/asphalt")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    line: typeof search.line === "string" ? search.line : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Asphalt Spares | Spares Automation" },
       {
         name: "description",
-        content: "Live Shopify collection for asphalt and blacktop plant spares.",
+        content: "Product range for asphalt and blacktop plant spares.",
       },
     ],
   }),
@@ -30,6 +41,7 @@ export const Route = createFileRoute("/asphalt")({
 
 function AsphaltPage() {
   const { collection, products } = Route.useLoaderData();
+  const { line } = Route.useSearch();
 
   return (
     <CollectionPage
@@ -37,10 +49,12 @@ function AsphaltPage() {
       title="ASPHALT / BLACKTOP"
       image={asphalt}
       imageAlt="Asphalt plant"
-      intro="Specialist procurement of bituminous mixing plant components. From burner systems to drum mixer seals, products added to Shopify appear here automatically."
+      intro="Specialist procurement of bituminous mixing plant components, from burner systems to drum mixer seals."
       collection={collection}
       fallbackProducts={products}
       expectedHandle={collectionHandle}
+      productLines={productLines}
+      activeLine={line}
     />
   );
 }
