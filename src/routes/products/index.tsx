@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight, Filter, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronRight, Filter, Search, SlidersHorizontal, FileText, PlayCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ProductCard } from "@/components/shopify/ProductCard";
@@ -45,6 +45,45 @@ const categoryFilters: CategoryFilter[] = [
     label: "New Arrivals",
     handle: "new-arrivals",
     description: "Recently added catalogue items",
+  },
+];
+
+const pdfResources = [
+  {
+    title: "Asphalt Plant Parts Catalogue",
+    description: "Complete parts list and technical specifications for asphalt plant components",
+    url: "#",
+  },
+  {
+    title: "Concrete Mixer Maintenance Guide",
+    description: "Step-by-step maintenance and troubleshooting guide for concrete mixers",
+    url: "#",
+  },
+  {
+    title: "VFD Installation Manual",
+    description: "Installation and configuration guide for variable frequency drives",
+    url: "#",
+  },
+];
+
+const videoGuides = [
+  {
+    title: "How to Replace Burner Nozzles",
+    description: "Step-by-step video tutorial for replacing asphalt plant burner nozzles",
+    thumbnail: automation,
+    url: "#",
+  },
+  {
+    title: "VFD Programming Basics",
+    description: "Introduction to programming and configuring variable frequency drives",
+    thumbnail: automation,
+    url: "#",
+  },
+  {
+    title: "Concrete Mixer Lubrication Guide",
+    description: "Proper lubrication procedures for concrete mixer components",
+    thumbnail: automation,
+    url: "#",
   },
 ];
 
@@ -302,6 +341,90 @@ function ProductsCataloguePage() {
           </div>
         </section>
       </main>
+
+      <section className="border-t border-rule bg-surface py-16">
+        <div className="mx-auto max-w-[1600px] px-6">
+          {/* PDF Attachments Section */}
+          <div className="mb-16">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
+                Resources
+              </div>
+              <div className="flex-1 h-px bg-rule"></div>
+            </div>
+            <h2 className="font-display text-3xl md:text-4xl font-extrabold uppercase tracking-tight mb-10">
+              PDF Attachments & Manuals
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {pdfResources.map((pdf, index) => (
+                <a
+                  key={index}
+                  href={pdf.url}
+                  className="flex flex-col gap-4 p-6 border border-rule bg-white hover:border-accent hover:shadow-lg transition-all"
+                >
+                  <FileText className="h-10 w-10 text-accent" />
+                  <div>
+                    <h3 className="font-display text-lg font-bold uppercase tracking-tight">
+                      {pdf.title}
+                    </h3>
+                    <p className="mt-2 text-sm text-ink-muted leading-relaxed">
+                      {pdf.description}
+                    </p>
+                  </div>
+                  <div className="mt-auto font-mono text-[11px] uppercase tracking-[0.2em] text-accent">
+                    Download PDF →
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Video Guides Section */}
+          <div>
+            <div className="flex items-center gap-3 mb-8">
+              <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
+                Tutorials
+              </div>
+              <div className="flex-1 h-px bg-rule"></div>
+            </div>
+            <h2 className="font-display text-3xl md:text-4xl font-extrabold uppercase tracking-tight mb-10">
+              Video Guides
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {videoGuides.map((video, index) => (
+                <a
+                  key={index}
+                  href={video.url}
+                  className="group flex flex-col gap-4 border border-rule bg-white hover:border-accent hover:shadow-lg transition-all"
+                >
+                  <div className="relative overflow-hidden aspect-video">
+                    <img
+                      src={video.thumbnail}
+                      alt={video.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-opacity duration-300 group-hover:bg-black/40">
+                      <PlayCircle className="h-14 w-14 text-white" />
+                    </div>
+                  </div>
+                  <div className="p-6 flex-1">
+                    <h3 className="font-display text-lg font-bold uppercase tracking-tight">
+                      {video.title}
+                    </h3>
+                    <p className="mt-2 text-sm text-ink-muted leading-relaxed">
+                      {video.description}
+                    </p>
+                  </div>
+                  <div className="px-6 pb-6 font-mono text-[11px] uppercase tracking-[0.2em] text-accent">
+                    Watch Video →
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <SiteFooter />
     </div>
   );
