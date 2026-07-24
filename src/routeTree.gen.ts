@@ -17,6 +17,7 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as ReturnsPolicyRouteImport } from './routes/returns-policy'
 import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as QuoteRouteImport } from './routes/quote'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as PackingRouteImport } from './routes/packing'
 import { Route as NewArrivalsRouteImport } from './routes/new-arrivals'
@@ -26,7 +27,9 @@ import { Route as GotAQuestionRouteImport } from './routes/got-a-question'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DisclaimerRouteImport } from './routes/disclaimer'
 import { Route as DeliveryInformationRouteImport } from './routes/delivery-information'
+import { Route as CreditAccountRouteImport } from './routes/credit-account'
 import { Route as CookiesRouteImport } from './routes/cookies'
+import { Route as ControlPanelsSoftwareRouteImport } from './routes/control-panels-software'
 import { Route as ContactUsRouteImport } from './routes/contact-us'
 import { Route as ConcreteRouteImport } from './routes/concrete'
 import { Route as CartRouteImport } from './routes/cart'
@@ -36,7 +39,10 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as AboutUsRouteImport } from './routes/about-us'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as ProductsHandleRouteImport } from './routes/products/$handle'
+import { Route as AdminLoginRouteImport } from './routes/admin/login'
+import { Route as AdminSubmissionsIdRouteImport } from './routes/admin/submissions.$id'
 
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
   id: '/unsubscribe',
@@ -76,6 +82,11 @@ const ResourcesRoute = ResourcesRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuoteRoute = QuoteRouteImport.update({
+  id: '/quote',
+  path: '/quote',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
@@ -123,9 +134,19 @@ const DeliveryInformationRoute = DeliveryInformationRouteImport.update({
   path: '/delivery-information',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreditAccountRoute = CreditAccountRouteImport.update({
+  id: '/credit-account',
+  path: '/credit-account',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CookiesRoute = CookiesRouteImport.update({
   id: '/cookies',
   path: '/cookies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ControlPanelsSoftwareRoute = ControlPanelsSoftwareRouteImport.update({
+  id: '/control-panels-software',
+  path: '/control-panels-software',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactUsRoute = ContactUsRouteImport.update({
@@ -173,9 +194,24 @@ const ProductsIndexRoute = ProductsIndexRouteImport.update({
   path: '/products/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductsHandleRoute = ProductsHandleRouteImport.update({
   id: '/products/$handle',
   path: '/products/$handle',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSubmissionsIdRoute = AdminSubmissionsIdRouteImport.update({
+  id: '/admin/submissions/$id',
+  path: '/admin/submissions/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -188,7 +224,9 @@ export interface FileRoutesByFullPath {
   '/cart': typeof CartRoute
   '/concrete': typeof ConcreteRoute
   '/contact-us': typeof ContactUsRoute
+  '/control-panels-software': typeof ControlPanelsSoftwareRoute
   '/cookies': typeof CookiesRoute
+  '/credit-account': typeof CreditAccountRoute
   '/delivery-information': typeof DeliveryInformationRoute
   '/disclaimer': typeof DisclaimerRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -198,6 +236,7 @@ export interface FileRoutesByFullPath {
   '/new-arrivals': typeof NewArrivalsRoute
   '/packing': typeof PackingRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/quote': typeof QuoteRoute
   '/register': typeof RegisterRoute
   '/resources': typeof ResourcesRoute
   '/returns-policy': typeof ReturnsPolicyRoute
@@ -206,8 +245,11 @@ export interface FileRoutesByFullPath {
   '/track-order': typeof TrackOrderRoute
   '/trade-account': typeof TradeAccountRoute
   '/unsubscribe': typeof UnsubscribeRoute
+  '/admin/login': typeof AdminLoginRoute
   '/products/$handle': typeof ProductsHandleRoute
+  '/admin/': typeof AdminIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/admin/submissions/$id': typeof AdminSubmissionsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -218,7 +260,9 @@ export interface FileRoutesByTo {
   '/cart': typeof CartRoute
   '/concrete': typeof ConcreteRoute
   '/contact-us': typeof ContactUsRoute
+  '/control-panels-software': typeof ControlPanelsSoftwareRoute
   '/cookies': typeof CookiesRoute
+  '/credit-account': typeof CreditAccountRoute
   '/delivery-information': typeof DeliveryInformationRoute
   '/disclaimer': typeof DisclaimerRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -228,6 +272,7 @@ export interface FileRoutesByTo {
   '/new-arrivals': typeof NewArrivalsRoute
   '/packing': typeof PackingRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/quote': typeof QuoteRoute
   '/register': typeof RegisterRoute
   '/resources': typeof ResourcesRoute
   '/returns-policy': typeof ReturnsPolicyRoute
@@ -236,8 +281,11 @@ export interface FileRoutesByTo {
   '/track-order': typeof TrackOrderRoute
   '/trade-account': typeof TradeAccountRoute
   '/unsubscribe': typeof UnsubscribeRoute
+  '/admin/login': typeof AdminLoginRoute
   '/products/$handle': typeof ProductsHandleRoute
+  '/admin': typeof AdminIndexRoute
   '/products': typeof ProductsIndexRoute
+  '/admin/submissions/$id': typeof AdminSubmissionsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -249,7 +297,9 @@ export interface FileRoutesById {
   '/cart': typeof CartRoute
   '/concrete': typeof ConcreteRoute
   '/contact-us': typeof ContactUsRoute
+  '/control-panels-software': typeof ControlPanelsSoftwareRoute
   '/cookies': typeof CookiesRoute
+  '/credit-account': typeof CreditAccountRoute
   '/delivery-information': typeof DeliveryInformationRoute
   '/disclaimer': typeof DisclaimerRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -259,6 +309,7 @@ export interface FileRoutesById {
   '/new-arrivals': typeof NewArrivalsRoute
   '/packing': typeof PackingRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/quote': typeof QuoteRoute
   '/register': typeof RegisterRoute
   '/resources': typeof ResourcesRoute
   '/returns-policy': typeof ReturnsPolicyRoute
@@ -267,8 +318,11 @@ export interface FileRoutesById {
   '/track-order': typeof TrackOrderRoute
   '/trade-account': typeof TradeAccountRoute
   '/unsubscribe': typeof UnsubscribeRoute
+  '/admin/login': typeof AdminLoginRoute
   '/products/$handle': typeof ProductsHandleRoute
+  '/admin/': typeof AdminIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/admin/submissions/$id': typeof AdminSubmissionsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -281,7 +335,9 @@ export interface FileRouteTypes {
     | '/cart'
     | '/concrete'
     | '/contact-us'
+    | '/control-panels-software'
     | '/cookies'
+    | '/credit-account'
     | '/delivery-information'
     | '/disclaimer'
     | '/forgot-password'
@@ -291,6 +347,7 @@ export interface FileRouteTypes {
     | '/new-arrivals'
     | '/packing'
     | '/privacy-policy'
+    | '/quote'
     | '/register'
     | '/resources'
     | '/returns-policy'
@@ -299,8 +356,11 @@ export interface FileRouteTypes {
     | '/track-order'
     | '/trade-account'
     | '/unsubscribe'
+    | '/admin/login'
     | '/products/$handle'
+    | '/admin/'
     | '/products/'
+    | '/admin/submissions/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -311,7 +371,9 @@ export interface FileRouteTypes {
     | '/cart'
     | '/concrete'
     | '/contact-us'
+    | '/control-panels-software'
     | '/cookies'
+    | '/credit-account'
     | '/delivery-information'
     | '/disclaimer'
     | '/forgot-password'
@@ -321,6 +383,7 @@ export interface FileRouteTypes {
     | '/new-arrivals'
     | '/packing'
     | '/privacy-policy'
+    | '/quote'
     | '/register'
     | '/resources'
     | '/returns-policy'
@@ -329,8 +392,11 @@ export interface FileRouteTypes {
     | '/track-order'
     | '/trade-account'
     | '/unsubscribe'
+    | '/admin/login'
     | '/products/$handle'
+    | '/admin'
     | '/products'
+    | '/admin/submissions/$id'
   id:
     | '__root__'
     | '/'
@@ -341,7 +407,9 @@ export interface FileRouteTypes {
     | '/cart'
     | '/concrete'
     | '/contact-us'
+    | '/control-panels-software'
     | '/cookies'
+    | '/credit-account'
     | '/delivery-information'
     | '/disclaimer'
     | '/forgot-password'
@@ -351,6 +419,7 @@ export interface FileRouteTypes {
     | '/new-arrivals'
     | '/packing'
     | '/privacy-policy'
+    | '/quote'
     | '/register'
     | '/resources'
     | '/returns-policy'
@@ -359,8 +428,11 @@ export interface FileRouteTypes {
     | '/track-order'
     | '/trade-account'
     | '/unsubscribe'
+    | '/admin/login'
     | '/products/$handle'
+    | '/admin/'
     | '/products/'
+    | '/admin/submissions/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -372,7 +444,9 @@ export interface RootRouteChildren {
   CartRoute: typeof CartRoute
   ConcreteRoute: typeof ConcreteRoute
   ContactUsRoute: typeof ContactUsRoute
+  ControlPanelsSoftwareRoute: typeof ControlPanelsSoftwareRoute
   CookiesRoute: typeof CookiesRoute
+  CreditAccountRoute: typeof CreditAccountRoute
   DeliveryInformationRoute: typeof DeliveryInformationRoute
   DisclaimerRoute: typeof DisclaimerRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
@@ -382,6 +456,7 @@ export interface RootRouteChildren {
   NewArrivalsRoute: typeof NewArrivalsRoute
   PackingRoute: typeof PackingRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
+  QuoteRoute: typeof QuoteRoute
   RegisterRoute: typeof RegisterRoute
   ResourcesRoute: typeof ResourcesRoute
   ReturnsPolicyRoute: typeof ReturnsPolicyRoute
@@ -390,8 +465,11 @@ export interface RootRouteChildren {
   TrackOrderRoute: typeof TrackOrderRoute
   TradeAccountRoute: typeof TradeAccountRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
+  AdminLoginRoute: typeof AdminLoginRoute
   ProductsHandleRoute: typeof ProductsHandleRoute
+  AdminIndexRoute: typeof AdminIndexRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
+  AdminSubmissionsIdRoute: typeof AdminSubmissionsIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -450,6 +528,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quote': {
+      id: '/quote'
+      path: '/quote'
+      fullPath: '/quote'
+      preLoaderRoute: typeof QuoteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy-policy': {
@@ -515,11 +600,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeliveryInformationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/credit-account': {
+      id: '/credit-account'
+      path: '/credit-account'
+      fullPath: '/credit-account'
+      preLoaderRoute: typeof CreditAccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cookies': {
       id: '/cookies'
       path: '/cookies'
       fullPath: '/cookies'
       preLoaderRoute: typeof CookiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/control-panels-software': {
+      id: '/control-panels-software'
+      path: '/control-panels-software'
+      fullPath: '/control-panels-software'
+      preLoaderRoute: typeof ControlPanelsSoftwareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact-us': {
@@ -585,11 +684,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/products/$handle': {
       id: '/products/$handle'
       path: '/products/$handle'
       fullPath: '/products/$handle'
       preLoaderRoute: typeof ProductsHandleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/admin/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/submissions/$id': {
+      id: '/admin/submissions/$id'
+      path: '/admin/submissions/$id'
+      fullPath: '/admin/submissions/$id'
+      preLoaderRoute: typeof AdminSubmissionsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -604,7 +724,9 @@ const rootRouteChildren: RootRouteChildren = {
   CartRoute: CartRoute,
   ConcreteRoute: ConcreteRoute,
   ContactUsRoute: ContactUsRoute,
+  ControlPanelsSoftwareRoute: ControlPanelsSoftwareRoute,
   CookiesRoute: CookiesRoute,
+  CreditAccountRoute: CreditAccountRoute,
   DeliveryInformationRoute: DeliveryInformationRoute,
   DisclaimerRoute: DisclaimerRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
@@ -614,6 +736,7 @@ const rootRouteChildren: RootRouteChildren = {
   NewArrivalsRoute: NewArrivalsRoute,
   PackingRoute: PackingRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
+  QuoteRoute: QuoteRoute,
   RegisterRoute: RegisterRoute,
   ResourcesRoute: ResourcesRoute,
   ReturnsPolicyRoute: ReturnsPolicyRoute,
@@ -622,8 +745,11 @@ const rootRouteChildren: RootRouteChildren = {
   TrackOrderRoute: TrackOrderRoute,
   TradeAccountRoute: TradeAccountRoute,
   UnsubscribeRoute: UnsubscribeRoute,
+  AdminLoginRoute: AdminLoginRoute,
   ProductsHandleRoute: ProductsHandleRoute,
+  AdminIndexRoute: AdminIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
+  AdminSubmissionsIdRoute: AdminSubmissionsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

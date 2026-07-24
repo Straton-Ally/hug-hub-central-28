@@ -9,13 +9,16 @@ import {
   getCart,
   getCollectionByHandle,
   getCustomer,
+  getCustomerOrders,
   getProductByHandle,
   getProducts,
   getProductsPage,
+  getProductsWithResources,
   removeCartLine,
   recoverCustomerPassword,
   updateCartLine,
 } from "../shopify/queries.server";
+import { shopifyAdmin } from "../shopify/admin.server";
 import {
   clearSession,
   useSession as getServerSessionManager,
@@ -40,6 +43,10 @@ export const getLatestProducts = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data }) => getProducts(data.first, data.query));
+
+export const getResourceProducts = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ first: z.number().int().min(1).max(100).default(100) }))
+  .handler(async ({ data }) => getProductsWithResources(data.first));
 
 export const getPaginatedProducts = createServerFn({ method: "GET" })
   .inputValidator(z.object({ first: z.number().int().min(1).max(100).default(48), query: z.string().optional(), after: z.string().optional() }))
@@ -91,6 +98,84 @@ export const removeShopifyCartLine = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }) => removeCartLine(data.cartId, data.lineId));
+
+const quoteLineSchema = z.object({
+  variantId: z.string().regex(/^gid:\/\/shopify\/ProductVariant\/\d+$/),
+  quantity: positiveQuantity,
+});
+
+export const submitShopifyQuote = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      email: z.string().trim().email("Enter a valid email address").max(254),
+      firstName: z.string().trim().min(1, "First name is required").max(80),
+      lastName: z.string().trim().min(1, "Last name is required").max(80),
+      company: z.string().trim().max(120).optional(),
+      phone: z.string().trim().max(30).optional(),
+      additionalInformation: z.string().trim().max(3000).optional(),
+      website: z.string().max(0),
+      lines: z.array(quoteLineSchema).min(1, "Add at least one product").max(50),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const note = [
+      "Website quote request",
+      `Customer: ${data.firstName} ${data.lastName}`,
+      data.company ? `Company: ${data.company}` : "",
+      data.phone ? `Phone: ${data.phone}` : "",
+      data.additionalInformation
+        ? `Additional information:\n${data.additionalInformation}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const result = await shopifyAdmin<{
+      draftOrderCreate: {
+        draftOrder: { id: string; name: string } | null;
+        userErrors: Array<{ field: string[] | null; message: string }>;
+      };
+    }>(
+      `#graphql
+        mutation CreateWebsiteQuote($input: DraftOrderInput!) {
+          draftOrderCreate(input: $input) {
+            draftOrder {
+              id
+              name
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+      `,
+      {
+        input: {
+          email: data.email,
+          note,
+          tags: ["Website quote request", "Awaiting sales review"],
+          lineItems: data.lines,
+          customAttributes: [
+            { key: "First name", value: data.firstName },
+            { key: "Last name", value: data.lastName },
+            ...(data.company ? [{ key: "Company", value: data.company }] : []),
+            ...(data.phone ? [{ key: "Phone", value: data.phone }] : []),
+          ],
+        },
+      },
+    );
+
+    const errors = result.draftOrderCreate.userErrors;
+    if (errors.length || !result.draftOrderCreate.draftOrder) {
+      throw new Error(errors.map((error) => error.message).join("; ") || "The quote could not be created.");
+    }
+
+    return {
+      id: result.draftOrderCreate.draftOrder.id,
+      reference: result.draftOrderCreate.draftOrder.name,
+    };
+  });
 
 const CUSTOMER_ACCESS_TOKEN_SESSION_COOKIE = "sa_customer_access_token_session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 14;
@@ -174,7 +259,15 @@ export const loginShopifyCustomer = createServerFn({ method: "POST" })
 export const getShopifyCustomer = createServerFn({ method: "GET" }).handler(async () => {
   const sessionData = await getCustomerAccessTokenSession();
   if (!sessionData?.customerAccessToken) return null;
-  return getCustomer(sessionData.customerAccessToken);
+  const customer = await getCustomer(sessionData.customerAccessToken);
+  if (!customer) return null;
+
+  try {
+    const orders = await getCustomerOrders(sessionData.customerAccessToken);
+    return { ...customer, orders, orderHistoryAvailable: true as const };
+  } catch {
+    return { ...customer, orders: [], orderHistoryAvailable: false as const };
+  }
 });
 
 export const logoutShopifyCustomer = createServerFn({ method: "POST" }).handler(async () => {

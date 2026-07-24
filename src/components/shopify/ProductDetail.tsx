@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
   FileText,
-  HelpCircle,
   Mail,
   MessageCircle,
   Minus,
@@ -13,12 +14,14 @@ import {
 import { useState } from "react";
 
 import { AddToCartButton } from "@/components/shopify/AddToCartButton";
+import { AddToQuoteButton } from "@/components/shopify/AddToQuoteButton";
+import { PayPalMark } from "@/components/shopify/PaymentMarks";
 import { SiteFooter } from "@/components/shopify/SiteFooter";
 import { SiteHeader } from "@/components/shopify/SiteHeader";
 import { formatMoney, shopifyImageUrl } from "@/lib/shopify/format";
 import type { ShopifyProduct, ShopifyVariant } from "@/lib/shopify/types";
 import { SITE } from "@/lib/site";
-import { productQuestionMailto, productQuestionWhatsApp, productQuoteMailto } from "@/lib/quote";
+import { productQuestionMailto, productQuestionWhatsApp } from "@/lib/quote";
 
 type ProductDetailProps = {
   product: ShopifyProduct;
@@ -49,7 +52,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
         <div className="border-b border-rule bg-surface px-4 py-4 md:px-6 lg:px-10">
           <Link
             to="/products"
-            search={{ category: "all", q: "", availability: "all", sort: "newest" }}
+            search={{ category: "all", availability: "all", sort: "newest" }}
             className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-ink-muted transition-colors hover:text-accent"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -57,7 +60,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
           </Link>
         </div>
 
-        <section className="grid grid-cols-1 gap-px bg-rule lg:grid-rows-[auto_auto] lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <section className="grid grid-cols-1 gap-px bg-rule lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           {/* Row 1: Product Gallery and Product Info */}
           <ProductGallery
             productTitle={product.title}
@@ -66,26 +69,23 @@ export function ProductDetail({ product }: ProductDetailProps) {
             onSelectImage={setActiveImage}
           />
 
-          <section className="bg-surface p-4 md:p-8 lg:p-12 lg:row-span-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="border border-rule bg-background px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-ink-muted">
-                {brand}
-              </span>
+          <section className="bg-surface p-4 md:p-6 lg:p-8">
+            <div className="flex flex-wrap items-center gap-2">
               <StockBadge variant={selectedVariant} product={product} />
             </div>
 
-            <h1 className="mt-4 max-w-3xl break-words font-display text-[1.55rem] font-extrabold uppercase leading-[1.08] tracking-normal text-ink sm:text-[1.85rem] md:mt-5 md:text-[2.45rem] lg:text-[3.15rem]">
+            <h1 className="mt-4 max-w-3xl break-words font-display text-[1.15rem] font-bold leading-[1.2] tracking-[-0.01em] text-ink sm:text-[1.3rem] md:mt-5 md:text-[1.45rem] lg:text-[1.65rem]">
               {product.title}
             </h1>
 
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
               <SpecBlock label="Brand" value={brand} />
               <SpecBlock label="MPN / Range" value={mpnRange} />
               <SpecBlock label="Product line" value={product.productType || "Industrial part"} />
             </div>
 
-            <div className="mt-8 flex flex-wrap items-end gap-x-5 gap-y-2">
-              <div className="font-display text-3xl font-bold text-ink">
+            <div className="mt-6 flex flex-wrap items-end gap-x-4 gap-y-2">
+              <div className="font-display text-2xl font-bold text-ink md:text-[1.75rem]">
                 {selectedVariant ? formatMoney(selectedVariant.price) : "Price on request"}
               </div>
               {selectedVariant?.compareAtPrice ? (
@@ -95,10 +95,8 @@ export function ProductDetail({ product }: ProductDetailProps) {
               ) : null}
             </div>
 
-            <ProductDescription product={product} />
-
             {product.variants.length > 1 ? (
-              <div className="mt-8">
+              <div className="mt-6">
                 <label className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
                   Variant
                 </label>
@@ -117,7 +115,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
               </div>
             ) : null}
 
-            <div className="mt-8 space-y-3">
+            <div className="mt-6 space-y-3">
               <QuantityStepper
                 value={quantity}
                 onChange={setQuantity}
@@ -132,13 +130,12 @@ export function ProductDetail({ product }: ProductDetailProps) {
                 >
                   {selectedVariant?.availableForSale ? "Add to Cart" : "Sold out"}
                 </AddToCartButton>
-                <a
-                  href={productQuoteMailto(product, selectedVariant, quantity)}
+                <AddToQuoteButton
+                  product={product}
+                  variant={selectedVariant}
+                  quantity={quantity}
                   className="inline-flex h-13 items-center justify-center gap-2 border border-accent bg-accent/5 px-5 font-mono text-[11px] uppercase tracking-[0.16em] text-accent transition-colors hover:bg-accent hover:text-accent-foreground"
-                >
-                  <FileText className="h-4 w-4" />
-                  Request quote by email
-                </a>
+                />
                 <Link
                   to="/cart"
                   className="inline-flex h-13 items-center justify-center border border-rule px-5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:border-accent hover:text-accent"
@@ -146,13 +143,23 @@ export function ProductDetail({ product }: ProductDetailProps) {
                   View Cart
                 </Link>
               </div>
+              <div className="flex flex-col gap-3 border border-rule bg-background p-3.5 sm:flex-row sm:items-center">
+                <PayPalMark prominent />
+                <div>
+                  <div className="font-display text-sm font-bold uppercase tracking-tight text-ink">
+                    PayPal accepted
+                  </div>
+                  <div className="mt-1 text-xs leading-5 text-ink-muted">
+                    Select PayPal as your payment method at secure checkout.
+                  </div>
+                </div>
+              </div>
             </div>
 
             <QuestionActions product={product} variant={selectedVariant} />
           </section>
 
-          {/* Row 2: Product Resources, same width as Product Gallery */}
-          <div className="bg-surface">
+          <div className="bg-surface lg:col-span-2">
             <ProductResources product={product} />
           </div>
         </section>
@@ -228,9 +235,19 @@ function ProductGallery({
   activeImage: ShopifyProduct["images"][number] | undefined;
   onSelectImage: (image: ShopifyProduct["images"][number]) => void;
 }) {
+  const activeIndex = activeImage
+    ? gallery.findIndex((image) => image.url === activeImage.url)
+    : 0;
+  const showNavigation = gallery.length > 1;
+  const selectRelativeImage = (offset: number) => {
+    const currentIndex = activeIndex >= 0 ? activeIndex : 0;
+    const nextIndex = (currentIndex + offset + gallery.length) % gallery.length;
+    onSelectImage(gallery[nextIndex]);
+  };
+
   return (
-    <section className="bg-surface p-4 md:p-8 lg:p-10">
-      <div className="aspect-square overflow-hidden bg-[oklch(0.96_0.005_250)]">
+    <section className="bg-surface p-4 md:p-6 lg:p-8">
+      <div className="relative aspect-[4/3] max-h-[620px] overflow-hidden bg-[oklch(0.96_0.005_250)]">
         {activeImage ? (
           <img
             src={shopifyImageUrl(activeImage.url, 1000)}
@@ -246,6 +263,30 @@ function ProductGallery({
             Image pending
           </div>
         )}
+
+        {showNavigation ? (
+          <>
+            <button
+              type="button"
+              onClick={() => selectRelativeImage(-1)}
+              aria-label="View previous product image"
+              className="absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-rule bg-white/90 text-ink shadow-md transition-colors hover:border-accent hover:bg-accent hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:left-4 md:h-12 md:w-12"
+            >
+              <ChevronLeft className="h-6 w-6" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => selectRelativeImage(1)}
+              aria-label="View next product image"
+              className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-rule bg-white/90 text-ink shadow-md transition-colors hover:border-accent hover:bg-accent hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:right-4 md:h-12 md:w-12"
+            >
+              <ChevronRight className="h-6 w-6" aria-hidden="true" />
+            </button>
+            <span className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-charcoal-deep/85 px-2.5 py-1 font-mono text-[9px] font-bold tracking-[0.12em] text-white md:bottom-4">
+              {(activeIndex >= 0 ? activeIndex : 0) + 1} / {gallery.length}
+            </span>
+          </>
+        ) : null}
       </div>
 
       {gallery.length > 1 ? (
@@ -283,7 +324,7 @@ function StockBadge({ variant, product }: { variant?: ShopifyVariant; product: S
 
   if (!isAvailable) {
     return (
-      <span className="inline-flex items-center gap-2 border border-red-200 bg-red-50 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-red-700">
+      <span className="inline-flex min-h-10 items-center gap-2 border border-red-200 bg-red-50 px-3 text-sm font-semibold text-red-700">
         <PackageCheck className="h-3.5 w-3.5" />
         Out of stock
       </span>
@@ -291,31 +332,24 @@ function StockBadge({ variant, product }: { variant?: ShopifyVariant; product: S
   }
 
   return (
-    <div className="inline-flex max-w-full flex-col gap-1 border border-accent/45 bg-charcoal-deep px-4 py-3 text-white shadow-sm ring-1 ring-white/10">
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="font-display text-2xl font-extrabold leading-none tracking-tight text-accent">
-          {hasExactStock ? quantity : "Available"}
-        </span>
-        <span className="font-display text-xl font-extrabold leading-none">
-          {hasExactStock ? "in stock" : "to order"}
-        </span>
-        <span className="text-sm font-bold leading-none text-white/80">Lead time confirmed at order</span>
-      </div>
-      <div className="flex items-center gap-1.5 border-l-2 border-accent pl-3 text-sm font-semibold leading-tight text-white/90">
-        Contact sales to confirm dispatch and delivery
-        <HelpCircle className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
-      </div>
+    <div className="inline-flex min-h-10 max-w-full flex-wrap items-center gap-x-2 gap-y-1 border border-accent/30 bg-accent/5 px-3 text-sm text-ink">
+      <PackageCheck className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+      <span className="font-semibold">
+        {hasExactStock ? `${quantity} in stock` : "Available to order"}
+      </span>
+      <span aria-hidden="true" className="hidden h-4 w-px bg-rule sm:block" />
+      <span className="text-xs text-ink-muted">Lead time and dispatch confirmed at order</span>
     </div>
   );
 }
 
 function SpecBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border border-rule bg-surface p-4 shadow-[inset_3px_0_0_var(--color-accent)] md:p-5">
-      <div className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-ink">
+    <div className="border border-rule bg-surface p-3.5 shadow-[inset_3px_0_0_var(--color-accent)] md:p-4">
+      <div className="font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-ink-muted">
         {label}
       </div>
-      <div className="mt-3 break-words font-display text-[15px] font-bold leading-tight text-ink md:text-[17px]">
+      <div className="mt-2 break-words font-display text-sm font-semibold leading-snug text-ink md:text-[15px]">
         {value}
       </div>
     </div>
@@ -326,16 +360,14 @@ function ProductDescription({ product }: { product: ShopifyProduct }) {
   if (product.descriptionHtml) {
     return (
       <div
-        className="mt-8 max-w-3xl space-y-4 text-[15px] leading-relaxed text-ink-muted [&_a]:text-accent [&_ul]:list-disc [&_ul]:pl-5"
+        className="max-w-4xl space-y-4 text-sm leading-7 text-ink-muted [&_a]:text-accent [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
         dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
       />
     );
   }
 
   return (
-    <p className="mt-8 max-w-3xl text-[15px] leading-relaxed text-ink-muted">
-      {product.description || "Product details are being prepared. Contact us for specification help."}
-    </p>
+    <p className="max-w-4xl whitespace-pre-line text-sm leading-7 text-ink-muted">{product.description}</p>
   );
 }
 
@@ -346,101 +378,219 @@ function extractYouTubeVideoId(url: string) {
 }
 
 function ProductResources({ product }: { product: ShopifyProduct }) {
-  const [showVideo, setShowVideo] = useState(false);
-  const resources = [
-    ...product.technicalDetails.datasheets.map((resource) => ({ ...resource, type: "Datasheet" })),
-    ...product.technicalDetails.manuals.map((resource) => ({ ...resource, type: "Manual" })),
+  type SupportTab = "video" | "pdf" | "description";
+  const [activeTab, setActiveTab] = useState<SupportTab>("video");
+  const { videoGuide, setupVideoUrl, pdfGuide, datasheets, manuals } = product.technicalDetails;
+  const videoLinks = [
+    ...(videoGuide ? [{ label: videoGuide.text || "Video guide", url: videoGuide.url }] : []),
+    ...(setupVideoUrl && setupVideoUrl !== videoGuide?.url
+      ? [{ label: "Setup video", url: setupVideoUrl }]
+      : []),
+  ];
+  const youtubeVideo = videoLinks
+    .map((video) => ({ ...video, youtubeId: extractYouTubeVideoId(video.url) }))
+    .find((video) => video.youtubeId);
+  const documents = [
+    ...(pdfGuide ? [{ label: pdfGuide.text || "PDF guide", url: pdfGuide.url, type: "PDF Guide" }] : []),
+    ...datasheets.map((resource) => ({ ...resource, type: "Datasheet" })),
+    ...manuals.map((resource) => ({ ...resource, type: "Manual" })),
+  ];
+  const hasDescription = Boolean(product.descriptionHtml.trim() || product.description.trim());
+  const tabs: Array<{ id: SupportTab; label: string; icon: typeof PlayCircle }> = [
+    { id: "video", label: "Video Guide", icon: PlayCircle },
+    { id: "pdf", label: "PDF Guide", icon: FileText },
+    { id: "description", label: "Description", icon: FileText },
   ];
 
-  const hasAnyResource = 
-    product.technicalDetails.setupVideoUrl || 
-    product.technicalDetails.videoGuide || 
-    product.technicalDetails.pdfGuide || 
-    resources.length > 0;
-
-  if (!hasAnyResource) return null;
-
-  const videoGuide = product.technicalDetails.videoGuide;
-  const youtubeVideoId = videoGuide ? extractYouTubeVideoId(videoGuide.url) : null;
-
   return (
-    <section className="mt-10 border-t border-rule pt-8">
-      <h2 className="font-display text-lg font-bold uppercase tracking-tight">Product support</h2>
-      
-      {/* Video Preview (if YouTube) */}
-      {videoGuide && youtubeVideoId && showVideo ? (
-        <div className="mt-6 border border-rule overflow-hidden bg-background">
-          <div className="aspect-video">
-            <iframe
-              width="100%"
-              height="100%"
-              src={`https://www.youtube-nocookie.com/embed/${youtubeVideoId}`}
-              title={videoGuide.text}
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              loading="lazy"
-              className="w-full h-full"
-            />
+    <section aria-labelledby="product-support-title" className="px-4 py-8 md:px-6 md:py-10 lg:px-8">
+      <div className="mx-auto max-w-[1400px]">
+        <div className="mb-5 md:mb-6">
+          <div className="font-mono text-[9px] font-bold uppercase tracking-[0.24em] text-accent">
+            Guides &amp; information
+          </div>
+          <h2 id="product-support-title" className="mt-2 font-display text-xl font-bold uppercase tracking-tight md:text-2xl">
+            Product Support
+          </h2>
+        </div>
+
+        <div className="overflow-hidden border border-rule bg-background">
+          <div
+            role="tablist"
+            aria-label="Product support information"
+            className="grid grid-cols-1 border-b border-rule bg-surface sm:grid-cols-3"
+          >
+            {tabs.map((tab, tabIndex) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  id={`support-tab-${tab.id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={`support-panel-${tab.id}`}
+                  tabIndex={isActive ? 0 : -1}
+                  onClick={() => setActiveTab(tab.id)}
+                  onKeyDown={(event) => {
+                    let nextIndex: number | null = null;
+                    if (event.key === "ArrowRight") nextIndex = (tabIndex + 1) % tabs.length;
+                    if (event.key === "ArrowLeft") nextIndex = (tabIndex - 1 + tabs.length) % tabs.length;
+                    if (event.key === "Home") nextIndex = 0;
+                    if (event.key === "End") nextIndex = tabs.length - 1;
+                    if (nextIndex === null) return;
+                    event.preventDefault();
+                    const nextTab = tabs[nextIndex];
+                    setActiveTab(nextTab.id);
+                    requestAnimationFrame(() => document.getElementById(`support-tab-${nextTab.id}`)?.focus());
+                  }}
+                  className={`relative flex min-h-14 items-center justify-center gap-2 border-rule px-4 font-mono text-[10px] font-bold uppercase tracking-[0.16em] transition-colors sm:border-r sm:last:border-r-0 ${
+                    isActive
+                      ? "bg-charcoal-deep text-white after:absolute after:inset-x-0 after:bottom-0 after:h-1 after:bg-accent"
+                      : "text-ink-muted hover:bg-background hover:text-accent"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div
+            id={`support-panel-${activeTab}`}
+            role="tabpanel"
+            aria-labelledby={`support-tab-${activeTab}`}
+            className="min-h-[260px] p-4 md:min-h-[340px] md:p-6 lg:p-8"
+          >
+            {activeTab === "video" ? (
+              videoLinks.length ? (
+                <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(240px,0.5fr)]">
+                  {youtubeVideo ? (
+                    <div className="aspect-video overflow-hidden border border-rule bg-charcoal-deep">
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        src={`https://www.youtube-nocookie.com/embed/${youtubeVideo.youtubeId}`}
+                        title={youtubeVideo.label}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        allowFullScreen
+                        className="h-full w-full"
+                      />
+                    </div>
+                  ) : (
+                    <SupportEmptyState
+                      icon={PlayCircle}
+                      title="Video preview unavailable"
+                      copy="Use the video link to open this guide in a new window."
+                    />
+                  )}
+                  <div className="space-y-3">
+                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-ink-muted">Available videos</div>
+                    {videoLinks.map((video) => (
+                      <SupportLink key={video.url} href={video.url} icon={PlayCircle} label={video.label} />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <SupportEmptyState
+                  icon={PlayCircle}
+                  title="No video available"
+                  copy="A video guide has not yet been added for this product."
+                />
+              )
+            ) : null}
+
+            {activeTab === "pdf" ? (
+              documents.length ? (
+                <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(240px,0.5fr)]">
+                  <iframe
+                    src={documents[0].url}
+                    title={`${documents[0].label} preview`}
+                    className="h-[55vh] min-h-[420px] w-full border border-rule bg-white"
+                  />
+                  <div className="space-y-3">
+                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-ink-muted">Available documents</div>
+                    {documents.map((document) => (
+                      <SupportLink
+                        key={`${document.type}-${document.url}`}
+                        href={document.url}
+                        icon={FileText}
+                        label={`${document.type}: ${document.label}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <SupportEmptyState
+                  icon={FileText}
+                  title="No PDF available"
+                  copy="A PDF guide or datasheet has not yet been added for this product."
+                />
+              )
+            ) : null}
+
+            {activeTab === "description" ? (
+              hasDescription ? (
+                <ProductDescription product={product} />
+              ) : (
+                <SupportEmptyState
+                  icon={FileText}
+                  title="No description available"
+                  copy="A detailed description has not yet been added for this product."
+                />
+              )
+            ) : null}
           </div>
         </div>
-      ) : videoGuide && youtubeVideoId ? (
-        <div className="mt-6 border border-rule bg-background p-5">
-          <p className="text-sm leading-6 text-ink-muted">This video is hosted by YouTube. Loading it may allow YouTube to store or access information on your device.</p>
-          <button type="button" onClick={() => setShowVideo(true)} className="mt-4 inline-flex h-11 items-center gap-2 bg-charcoal-deep px-5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-white hover:bg-accent">
-            <PlayCircle aria-hidden="true" className="h-4 w-4" /> Load YouTube video
-          </button>
-        </div>
-      ) : null}
-      
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {product.technicalDetails.setupVideoUrl ? (
-          <a
-            href={product.technicalDetails.setupVideoUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-3 border border-rule bg-background p-4 text-sm transition-colors hover:border-accent hover:text-accent"
-          >
-            <PlayCircle className="h-5 w-5 text-accent" />
-            Setup video
-          </a>
-        ) : null}
-        {videoGuide ? (
-          <a
-            href={videoGuide.url}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-3 border border-rule bg-background p-4 text-sm transition-colors hover:border-accent hover:text-accent"
-          >
-            <PlayCircle className="h-5 w-5 text-accent" />
-            {videoGuide.text}
-          </a>
-        ) : null}
-        {product.technicalDetails.pdfGuide ? (
-          <a
-            href={product.technicalDetails.pdfGuide.url}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-3 border border-rule bg-background p-4 text-sm transition-colors hover:border-accent hover:text-accent"
-          >
-            <FileText className="h-5 w-5 text-accent" />
-            {product.technicalDetails.pdfGuide.text}
-          </a>
-        ) : null}
-        {resources.map((resource) => (
-          <a
-            key={`${resource.type}-${resource.url}`}
-            href={resource.url}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-3 border border-rule bg-background p-4 text-sm transition-colors hover:border-accent hover:text-accent"
-          >
-            <FileText className="h-5 w-5 text-accent" />
-            {resource.type}: {resource.label}
-          </a>
-        ))}
       </div>
     </section>
+  );
+}
+
+function SupportLink({
+  href,
+  icon: Icon,
+  label,
+}: {
+  href: string;
+  icon: typeof PlayCircle;
+  label: string;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="flex min-h-14 items-center gap-3 border border-rule bg-surface p-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent"
+    >
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center bg-accent/10 text-accent">
+        <Icon className="h-4 w-4" aria-hidden="true" />
+      </span>
+      <span>{label}</span>
+    </a>
+  );
+}
+
+function SupportEmptyState({
+  icon: Icon,
+  title,
+  copy,
+}: {
+  icon: typeof PlayCircle;
+  title: string;
+  copy: string;
+}) {
+  return (
+    <div className="flex min-h-[220px] flex-col items-center justify-center border border-dashed border-rule bg-surface px-5 py-10 text-center md:min-h-[280px]">
+      <span className="flex h-12 w-12 items-center justify-center bg-accent/10 text-accent">
+        <Icon className="h-5 w-5" aria-hidden="true" />
+      </span>
+      <h3 className="mt-4 font-display text-lg font-bold uppercase tracking-tight">{title}</h3>
+      <p className="mt-2 max-w-md text-sm leading-6 text-ink-muted">{copy}</p>
+    </div>
   );
 }
 

@@ -2,6 +2,19 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { runMigrations } from "./lib/db/migrate.server";
+import { seedInitialAdmin } from "./lib/admin/auth.server";
+import { getDb } from "./lib/db/index.server";
+import { sql } from "drizzle-orm";
+
+// Apply CMS database migrations and seed the initial admin once on boot.
+// Database startup can briefly race the app process, so migrations retry
+// before seeding. Public pages remain available if the CMS database is absent.
+void runMigrations()
+  .then(async (migrationSucceeded) => {
+    if (migrationSucceeded) await seedInitialAdmin();
+  })
+  .catch((error) => console.error("[db] CMS initialization failed:", error));
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -52,6 +65,22 @@ function withSecurityHeaders(request: Request, response: Response) {
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    if (new URL(request.url).pathname === "/health") {
+      try {
+        await getDb().execute(sql`select 1`);
+        return new Response("ok", {
+          status: 200,
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        });
+      } catch (error) {
+        console.error("[health] Database readiness check failed:", error);
+        return new Response("database unavailable", {
+          status: 503,
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        });
+      }
+    }
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

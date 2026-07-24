@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight, Filter, Search, SlidersHorizontal } from "lucide-react";
+import { ArrowUpDown, ChevronRight, Filter, SlidersHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import automation from "@/assets/cat-automation.jpg";
@@ -25,7 +25,7 @@ const categoryFilters: CategoryFilter[] = [
   {
     label: "Concrete Spares",
     handle: "concrete",
-    description: "Aggregate, silos, additives, water, air controls",
+    description: "Aggregate feeding, material silos, additives, water, air and automation controls",
   },
   {
     label: "Packing Machinery",
@@ -38,21 +38,20 @@ const categoryFilters: CategoryFilter[] = [
     description: "VFDs, PLC modules, relays, sensors",
   },
   {
-    label: "Home Controls",
+    label: "Home Automation and Controls",
     handle: "home-controls",
     description: "Smart relays, sensors, DIN rail supplies",
   },
   {
-    label: "New Arrivals",
-    handle: "new-arrivals",
-    description: "Recently added catalogue items",
+    label: "Control Panels & Software",
+    handle: "control-panels-software",
+    description: "Control panels, PLC software and support",
   },
 ];
 
 export const Route = createFileRoute("/products/")({
   validateSearch: (search: Record<string, unknown>) => ({
     category: typeof search.category === "string" ? search.category : "all",
-    q: typeof search.q === "string" ? search.q : "",
     availability: search.availability === "available" ? "available" as const : "all" as const,
     sort: ["price-asc", "price-desc", "title"].includes(String(search.sort)) ? search.sort as "price-asc" | "price-desc" | "title" : "newest" as const,
   }),
@@ -84,19 +83,16 @@ function ProductsCataloguePage() {
   const { initialPage } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const [products, setProducts] = useState(initialPage.products);
+  const [products, setProducts] = useState<ShopifyProduct[]>(initialPage.products);
   const [pageInfo, setPageInfo] = useState(initialPage.pageInfo);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState("");
   const activeCategory = search.category;
-  const searchTerm = search.q;
   const availability = search.availability;
   const sort = search.sort;
-  const updateSearch = (updates: Partial<typeof search>) => void navigate({ search: (previous) => ({ ...previous, ...updates }), replace: true });
+  const updateSearch = (updates: Partial<typeof search>) => void navigate({ search: (previous: typeof search) => ({ ...previous, ...updates }), replace: true });
 
   const filteredProducts = useMemo(() => {
-    const needle = searchTerm.trim().toLowerCase();
-
     return products
       .filter((product) => {
         if (activeCategory !== "all" && !productMatchesCategory(product, activeCategory)) {
@@ -107,18 +103,7 @@ function ProductsCataloguePage() {
           return false;
         }
 
-        if (!needle) return true;
-
-        return [
-          product.title,
-          product.vendor,
-          product.productType,
-          product.description,
-          ...product.tags,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(needle);
+        return true;
       })
       .sort((a, b) => {
         if (sort === "title") return a.title.localeCompare(b.title);
@@ -131,28 +116,28 @@ function ProductsCataloguePage() {
 
         return 0;
       });
-  }, [activeCategory, availability, products, searchTerm, sort]);
+  }, [activeCategory, availability, products, sort]);
 
   return (
     <div className="min-h-screen bg-background text-ink">
       <SiteHeader />
 
-      <section className="relative flex min-h-[220px] min-w-0 items-end overflow-hidden md:min-h-[280px]">
+      <section className="relative flex min-h-[150px] min-w-0 items-center overflow-hidden md:min-h-[180px]">
         <img
           src={automation}
           alt="Industrial automation catalogue"
           className="absolute inset-0 h-full w-full scale-105 object-cover blur-[2px]"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal-deep via-charcoal-deep/70 to-charcoal-deep/10" />
-        <div className="relative mx-auto w-full max-w-[1600px] px-4 py-10 md:px-6 md:py-12">
-          <div className="mb-4 flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.3em] text-white/60">
+        <div className="relative mx-auto w-full max-w-[1600px] px-4 py-6 md:px-6 md:py-8">
+          <div className="mb-2 flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.3em] text-white/60 md:text-[10px]">
             <span className="h-px w-8 bg-accent" />
             Product Catalogue / Cart
           </div>
-          <h1 className="break-words font-display text-[clamp(1.85rem,8vw,3.5rem)] font-extrabold uppercase leading-[0.95] tracking-tight text-white">
+          <h1 className="break-words font-display text-[clamp(1.45rem,5vw,2.25rem)] font-extrabold uppercase leading-none tracking-tight text-white">
             ALL PRODUCTS <span className="text-accent">CATALOGUE</span>
           </h1>
-          <p className="mt-4 max-w-2xl pr-2 text-sm leading-relaxed text-white/70 md:pr-0 md:text-[15px]">
+          <p className="mt-2 max-w-2xl pr-2 text-xs leading-relaxed text-white/70 md:pr-0 md:text-sm">
             Browse the catalogue and narrow the visible products with the filters below.
           </p>
         </div>
@@ -214,63 +199,67 @@ function ProductsCataloguePage() {
         </aside>
 
         <section>
-          <div className="border border-rule bg-surface p-3 md:p-4">
-            <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.28em] text-ink-muted">
-              Filter current results
-            </div>
-            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_180px_180px]">
-              <label className="flex h-10 items-center gap-3 border border-rule bg-background px-3 transition-colors focus-within:border-accent md:h-11">
-                <Search className="h-4 w-4 text-ink-muted" />
-                <input
-                  aria-label="Filter current product results"
-                  value={searchTerm}
-                  onChange={(event) => updateSearch({ q: event.target.value })}
-                  type="search"
-                  placeholder="Search within results..."
-                  className="min-w-0 flex-1 bg-transparent font-mono text-[12px] text-ink placeholder:text-ink-muted focus:outline-none"
-                />
-              </label>
+          <div className="border border-rule bg-surface p-4 md:p-5">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-ink-muted">
+                  <SlidersHorizontal className="h-4 w-4 text-accent" />
+                  Refine products
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+                    Showing <strong className="font-bold text-ink">{filteredProducts.length}</strong> of{" "}
+                    <strong className="font-bold text-ink">{products.length}</strong> loaded
+                  </span>
+                  <span className="border border-accent/30 bg-accent/10 px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-accent">
+                    {activeCategory === "all"
+                      ? "All Products"
+                      : categoryFilters.find((category) => category.handle === activeCategory)?.label}
+                  </span>
+                </div>
+              </div>
 
-              <label className="flex h-10 items-center gap-3 border border-rule bg-background px-3 md:h-11">
-                <SlidersHorizontal className="h-4 w-4 text-ink-muted" />
-                <select
-                  aria-label="Filter by availability"
-                  value={availability}
-                  onChange={(event) =>
-                    updateSearch({ availability: event.target.value as "all" | "available" })
-                  }
-                  className="min-w-0 flex-1 bg-transparent font-mono text-[11px] uppercase tracking-[0.16em] text-ink focus:outline-none"
-                >
-                  <option value="all">All Stock</option>
-                  <option value="available">Available</option>
-                </select>
-              </label>
+              <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:w-auto">
+                <label className="group min-w-0 border border-rule bg-background px-3 py-2 transition-colors focus-within:border-accent sm:min-w-[190px]">
+                  <span className="block font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-ink-muted">
+                    Availability
+                  </span>
+                  <span className="mt-1 flex items-center gap-2">
+                    <SlidersHorizontal className="h-3.5 w-3.5 shrink-0 text-accent" />
+                    <select
+                      aria-label="Filter by availability"
+                      value={availability}
+                      onChange={(event) =>
+                        updateSearch({ availability: event.target.value as "all" | "available" })
+                      }
+                      className="min-w-0 flex-1 bg-transparent font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink focus:outline-none"
+                    >
+                      <option value="all">All Stock</option>
+                      <option value="available">Available</option>
+                    </select>
+                  </span>
+                </label>
 
-              <label className="flex h-10 items-center gap-3 border border-rule bg-background px-3 md:h-11">
-                <select
-                  aria-label="Sort products"
-                  value={sort}
-                  onChange={(event) => updateSearch({ sort: event.target.value as typeof sort })}
-                  className="min-w-0 flex-1 bg-transparent font-mono text-[11px] uppercase tracking-[0.16em] text-ink focus:outline-none"
-                >
-                  <option value="newest">Newest</option>
-                  <option value="title">A-Z</option>
-                  <option value="price-asc">Price Low</option>
-                  <option value="price-desc">Price High</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="mt-4 flex flex-col gap-2 font-mono text-[10px] uppercase tracking-[0.24em] text-ink-muted sm:flex-row sm:items-center sm:justify-between">
-              <span>
-                Showing {filteredProducts.length} from {products.length} loaded products
-              </span>
-              <span>
-                Active filter:{" "}
-                {activeCategory === "all"
-                  ? "All Products"
-                  : categoryFilters.find((category) => category.handle === activeCategory)?.label}
-              </span>
+                <label className="group min-w-0 border border-rule bg-background px-3 py-2 transition-colors focus-within:border-accent sm:min-w-[190px]">
+                  <span className="block font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-ink-muted">
+                    Sort by
+                  </span>
+                  <span className="mt-1 flex items-center gap-2">
+                    <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-accent" />
+                    <select
+                      aria-label="Sort products"
+                      value={sort}
+                      onChange={(event) => updateSearch({ sort: event.target.value as typeof sort })}
+                      className="min-w-0 flex-1 bg-transparent font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink focus:outline-none"
+                    >
+                      <option value="newest">Newest</option>
+                      <option value="title">A-Z</option>
+                      <option value="price-asc">Price Low</option>
+                      <option value="price-desc">Price High</option>
+                    </select>
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -286,12 +275,12 @@ function ProductsCataloguePage() {
                 {products.length === 0 ? "Catalogue products are being updated" : "No products match these filters"}
               </h2>
               <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-ink-muted md:mt-4">
-                {products.length === 0 ? "Contact our sales desk for availability, product identification, or a quotation while the online catalogue is updated." : "Clear the search term, adjust filters, or browse other categories."}
+                {products.length === 0 ? "Contact our sales desk for availability, product identification, or a quotation while the online catalogue is updated." : "Adjust the filters or browse other categories."}
               </p>
               <button
                 type="button"
                 onClick={() => {
-                  void navigate({ search: { category: "all", q: "", availability: "all", sort: "newest" }, replace: true });
+                  void navigate({ search: { category: "all", availability: "all", sort: "newest" }, replace: true });
                 }}
                 className="mt-6 inline-flex h-11 items-center justify-center bg-accent px-6 font-mono text-[10px] uppercase tracking-[0.22em] text-accent-foreground md:mt-8"
               >

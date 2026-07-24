@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight, FileText, Mail, MessageSquare, PlayCircle, Send } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, ChevronRight, FileText, Mail, MessageSquare, Paperclip, PlayCircle, Send } from "lucide-react";
+import { useState, type FormEvent } from "react";
 
 import asphalt from "@/assets/asphalt-plant.jpg";
 import concrete from "@/assets/concrete-plant.jpg";
@@ -9,6 +9,8 @@ import catHome from "@/assets/cat-home.jpg";
 import catPacking from "@/assets/cat-packing.jpg";
 import { SiteFooter } from "@/components/shopify/SiteFooter";
 import { SiteHeader } from "@/components/shopify/SiteHeader";
+import { submitPartInquiry, uploadPartInquiryPhoto } from "@/lib/api/cms.functions";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { SITE, whatsappHref } from "@/lib/site";
 
 export const Route = createFileRoute("/")({
@@ -34,12 +36,12 @@ const primaryRanges = [
     to: "/asphalt",
     accent: "accent",
     lines: [
-      { label: "Feeders", href: "/asphalt?line=feeders" },
-      { label: "Burner / Drying", href: "/asphalt?line=burner-drying" },
-      { label: "Bitumen", href: "/asphalt?line=bitumen" },
-      { label: "Hot Stone / Silos", href: "/asphalt?line=hot-stone-silos" },
-      { label: "Baghouse", href: "/asphalt?line=baghouse" },
-      { label: "Mixing Tower", href: "/asphalt?line=mixing-tower" },
+      { label: "Feeders", meta: "Belts / Idlers / Drives", href: "/asphalt?line=feeders" },
+      { label: "Burner / Drying", meta: "Nozzles / Fuel pumps", href: "/asphalt?line=burner-drying" },
+      { label: "Bitumen", meta: "Pumps / Valves / Hoses", href: "/asphalt?line=bitumen" },
+      { label: "Hot Stone / Silos", meta: "Hot bins / Storage", href: "/asphalt?line=hot-stone-silos" },
+      { label: "Baghouse", meta: "Filters / Bags / Dust", href: "/asphalt?line=baghouse" },
+      { label: "Mixing Tower", meta: "Flights / Liners / Seals", href: "/asphalt?line=mixing-tower" },
     ],
   },
   {
@@ -48,12 +50,12 @@ const primaryRanges = [
     to: "/concrete",
     accent: "amber",
     lines: [
-      { label: "Aggregate Feeding", href: "/concrete?line=aggregate-feeding" },
-      { label: "Cement / Material silos", href: "/concrete?line=cement-material-silos" },
-      { label: "Additive system", href: "/concrete?line=additive-system" },
-      { label: "Water controls", href: "/concrete?line=water-controls" },
-      { label: "Air controls", href: "/concrete?line=air-controls" },
-      { label: "Automation controls", href: "/concrete?line=automation-controls" },
+      { label: "Aggregate Feeding", meta: "Hoppers / Belts / Conveyors", href: "/concrete?line=aggregate-feeding" },
+      { label: "Cement / Material Silos", meta: "Filters / Aerators / Valves", href: "/concrete?line=cement-material-silos" },
+      { label: "Additive System", meta: "Admixture / Chemical / Dosing", href: "/concrete?line=additive-system" },
+      { label: "Water Controls", meta: "Meters / Pumps / Flow Valves", href: "/concrete?line=water-controls" },
+      { label: "Air Controls", meta: "Pneumatics / Compressors / Actuators", href: "/concrete?line=air-controls" },
+      { label: "Automation Controls", meta: "PLCs / Sensors / Panels", href: "/concrete?line=automation-controls" },
     ],
   },
 ];
@@ -62,13 +64,68 @@ const categories = [
   // Replacement photos should be landscape, 4:3 or 16:10, minimum 1200px wide.
   { title: "Packing Machinery", img: catPacking, to: "/packing" },
   { title: "Automation & Drives", img: catAutomation, to: "/automation" },
-  { title: "Home Controls", img: catHome, to: "/home-controls" },
-  { title: "New Arrivals", img: catAutomation, to: "/new-arrivals" },
+  { title: "Home Automation and Controls", img: catHome, to: "/home-controls" },
+  { title: "Control Panels & Software", img: catAutomation, to: "/control-panels-software" },
 ];
 
+function HeroTitle({ title, accent }: { title: string; accent: "accent" | "amber" }) {
+  const baseTitle = title.replace(/ Spares$/, "");
+
+  return (
+    <>
+      {baseTitle}{" "}
+      <span className={accent === "amber" ? "text-amber" : "text-accent"}>Spares</span>
+    </>
+  );
+}
+
 function Home() {
-  const [partNumber, setPartNumber] = useState("");
-  const [description, setDescription] = useState("");
+  const hydrated = useHydrated();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [reference, setReference] = useState("");
+  const [photoError, setPhotoError] = useState("");
+
+  async function submitPartRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const photo = data.get("photo");
+    setBusy(true);
+    setError("");
+    setPhotoError("");
+    try {
+      const result = await submitPartInquiry({
+        data: {
+          partNumber: String(data.get("partNumber") ?? ""),
+          description: String(data.get("description") ?? ""),
+          name: String(data.get("name") ?? ""),
+          email: String(data.get("email") ?? ""),
+          phone: String(data.get("phone") ?? ""),
+          website: String(data.get("website") ?? ""),
+        },
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      if (photo instanceof File && photo.size > 0) {
+        const uploadData = new FormData();
+        uploadData.set("reference", result.reference);
+        uploadData.set("photo", photo);
+        const upload = await uploadPartInquiryPhoto({ data: uploadData });
+        if (!upload.ok) {
+          setPhotoError(upload.error ?? "The photo could not be uploaded.");
+        }
+      }
+      setReference(result.reference);
+      form.reset();
+    } catch {
+      setError("We could not send your request. Please check your details and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background text-ink">
@@ -79,7 +136,7 @@ function Home() {
         {primaryRanges.map((range, index) => (
           <article
             key={range.title}
-            className="group relative flex min-h-[390px] items-end overflow-hidden border-b border-rule md:min-h-[560px]"
+            className="hero-range group relative flex min-h-[390px] items-stretch overflow-hidden border-b border-rule md:min-h-[460px]"
           >
             <img
               src={range.img}
@@ -90,33 +147,55 @@ function Home() {
               fetchPriority={index === 0 ? "high" : "auto"}
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.05]"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-charcoal-deep via-charcoal-deep/70 to-charcoal-deep/20" />
+            <div className="absolute inset-0 bg-charcoal-deep/45" />
+            <div className="absolute inset-0 bg-gradient-to-t from-charcoal-deep via-charcoal-deep/55 to-charcoal-deep/10" />
 
-            <div className="relative z-10 flex min-h-[390px] min-w-0 w-full flex-col justify-end p-6 transition-all duration-500 md:min-h-[560px] md:p-10">
-              <Link to={range.to} className="block max-w-2xl focus-visible:outline-white">
-                <h2 className="break-words font-display text-[clamp(1.75rem,7.7vw,4.3rem)] font-extrabold uppercase leading-[0.95] tracking-tight text-white">
-                  {range.title}
-                </h2>
-              </Link>
-              <div className="mt-7 grid max-w-2xl grid-cols-1 gap-2 sm:grid-cols-2">
-                {range.lines.map((line) => (
-                  <a
-                    key={line.label}
-                    href={line.href}
-                    className={`flex min-h-10 items-center justify-between border bg-charcoal-deep/70 px-3 py-2 text-sm font-semibold text-white backdrop-blur-sm transition-colors ${
-                      range.accent === "amber"
-                        ? "border-white/10 hover:border-amber"
-                        : "border-white/10 hover:border-accent"
-                    }`}
-                  >
-                    <span className="truncate">{line.label}</span>
-                    <ChevronRight
-                      className={`ml-3 h-3.5 w-3.5 shrink-0 ${
-                        range.accent === "amber" ? "text-amber" : "text-accent"
+            <div className="relative z-10 flex min-h-[390px] min-w-0 w-full flex-col justify-end gap-4 p-4 md:min-h-[460px] md:gap-6 md:p-8 lg:p-10">
+              <div className="hero-range-title flex min-w-0 flex-col justify-end transition-all duration-500">
+                <Link to={range.to} className="block max-w-xl focus-visible:outline-white">
+                  <h2 className="break-words font-display text-[clamp(2rem,4.2vw,3.4rem)] font-extrabold uppercase leading-[0.95] tracking-tight text-white">
+                    <HeroTitle title={range.title} accent={range.accent as "accent" | "amber"} />
+                  </h2>
+                </Link>
+              </div>
+
+              <div className="hero-range-panel z-20 overflow-hidden border border-white/25 bg-charcoal-deep/92 shadow-2xl shadow-black/40 backdrop-blur-md transition-all duration-500 md:absolute md:inset-x-8 md:inset-y-8 md:flex md:flex-col md:bg-charcoal-deep/70 md:shadow-none md:backdrop-blur-sm lg:inset-x-10">
+                <div className="grid min-h-0 grid-cols-2 gap-1 p-2 md:grid-rows-3 md:gap-1.5 md:p-2.5">
+                  {range.lines.map((line) => (
+                    <a
+                      key={line.label}
+                      href={line.href}
+                      className={`group/item grid min-h-[62px] grid-cols-[1fr_auto] items-center border border-white/12 bg-charcoal-deep/72 px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm transition-colors md:min-h-[64px] md:px-4 ${
+                        range.accent === "amber"
+                          ? "hover:border-amber hover:bg-amber/10 focus-visible:border-amber"
+                          : "hover:border-accent hover:bg-accent/15 focus-visible:border-accent"
                       }`}
-                    />
-                  </a>
-                ))}
+                    >
+                      <span className="min-w-0">
+                        <span className="block break-words text-sm font-bold leading-tight text-white">
+                          {line.label}
+                        </span>
+                        <span className="mt-1 block truncate font-mono text-[9px] uppercase tracking-[0.12em] text-white/50">
+                          {line.meta}
+                        </span>
+                      </span>
+                      <ChevronRight
+                        className={`ml-3 h-3 w-3 shrink-0 transition-transform group-hover/item:translate-x-0.5 ${
+                          range.accent === "amber" ? "text-amber" : "text-accent"
+                        }`}
+                      />
+                    </a>
+                  ))}
+                </div>
+                <div
+                  aria-hidden="true"
+                  data-testid={`hero-hover-title-${index}`}
+                  className="hidden flex-1 items-end border-t border-white/15 bg-gradient-to-t from-charcoal-deep/90 to-transparent px-6 py-6 md:flex lg:px-8 lg:py-7"
+                >
+                  <div className="max-w-xl font-display text-[clamp(2rem,3.2vw,3rem)] font-extrabold uppercase leading-[0.95] tracking-tight text-white">
+                    <HeroTitle title={range.title} accent={range.accent as "accent" | "amber"} />
+                  </div>
+                </div>
               </div>
             </div>
           </article>
@@ -196,40 +275,79 @@ function Home() {
         </div>
       </section>
 
-      <section className="border-b border-rule bg-charcoal-deep py-14 md:py-16">
+      <section className="border-b border-rule bg-charcoal-deep py-10 md:py-14">
         <div className="mx-auto max-w-[1600px] px-4 md:px-6 lg:px-10">
-          <div className="text-center mb-10">
-            <div className="font-mono text-[11px] uppercase tracking-[0.28em] text-white/60">
+          <div className="mb-8 text-center">
+            <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight text-white md:text-3xl">
               Need help finding a part?
-            </div>
-            <h2 className="mx-auto mt-4 max-w-4xl font-display text-2xl font-extrabold uppercase tracking-tight text-white md:text-4xl">
-              Send a part number, product photo, or cart details.
             </h2>
+            <p className="mx-auto mt-2 max-w-4xl font-display text-lg font-bold uppercase tracking-tight text-white/85 md:text-2xl">
+              Send a part number or product description.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+            {reference ? (
+              <div role="status" className="border border-accent/40 bg-accent/10 p-6 text-sm leading-6 text-white">
+                <CheckCircle2 aria-hidden="true" className="mr-2 inline h-5 w-5 text-accent" />
+                Thank you. Your part request has been received and our reference is{" "}
+                <strong className="font-semibold">{reference}</strong>. The sales desk will reply by
+                email shortly.
+                {photoError ? (
+                  <span className="mt-2 block text-red-200">Note: {photoError}</span>
+                ) : null}
+              </div>
+            ) : (
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                // Handle form submission here - e.g., send to email, API, etc.
-                const mailtoLink = `mailto:${SITE.email}?subject=Part Request: ${encodeURIComponent(partNumber)}&body=${encodeURIComponent(`Part Number: ${partNumber}\n\nDescription: ${description}`)}`;
-                window.location.href = mailtoLink;
-              }}
-              className="space-y-6"
+              method="post"
+              onSubmit={submitPartRequest}
+              className="relative space-y-5 border border-white/10 bg-white/[0.035] p-4 sm:p-5 md:p-6"
             >
+              <label className="absolute -left-[9999px]" aria-hidden="true">
+                Website
+                <input name="website" tabIndex={-1} autoComplete="off" />
+              </label>
               <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="part-name" className="font-mono text-xs uppercase tracking-[0.2em] text-white/75 block mb-2">
+                      Your name
+                    </label>
+                    <input
+                      id="part-name"
+                      name="name"
+                      type="text"
+                      autoComplete="name"
+                      placeholder="Full name"
+                      className="h-12 w-full border border-white/20 bg-white/10 px-4 text-sm text-white transition-colors placeholder:text-white/40 focus:border-accent focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="part-email" className="font-mono text-xs uppercase tracking-[0.2em] text-white/75 block mb-2">
+                      Email
+                    </label>
+                    <input
+                      id="part-email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      placeholder="you@company.co.uk"
+                      className="h-12 w-full border border-white/20 bg-white/10 px-4 text-sm text-white transition-colors placeholder:text-white/40 focus:border-accent focus:outline-none"
+                    />
+                  </div>
+                </div>
                 <div>
                   <label htmlFor="part-number" className="font-mono text-xs uppercase tracking-[0.2em] text-white/75 block mb-2">
                     Part Number
                   </label>
                   <input
                     id="part-number"
+                    name="partNumber"
                     type="text"
-                    value={partNumber}
-                    onChange={(e) => setPartNumber(e.target.value)}
                     required
                     placeholder="Enter part number here..."
-                    className="w-full h-14 px-5 border border-white/20 bg-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-accent transition-colors"
+                    className="h-12 w-full border border-white/20 bg-white/10 px-4 text-sm text-white transition-colors placeholder:text-white/40 focus:border-accent focus:outline-none"
                   />
                 </div>
                 <div>
@@ -238,48 +356,76 @@ function Home() {
                   </label>
                   <textarea
                     id="part-description"
-                    rows={4}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    name="description"
+                    rows={3}
                     placeholder="Describe the part you need..."
-                    className="w-full px-5 py-4 border border-white/20 bg-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-accent transition-colors resize-none"
+                    className="w-full resize-y border border-white/20 bg-white/10 px-4 py-3 text-sm text-white transition-colors placeholder:text-white/40 focus:border-accent focus:outline-none"
                   />
                 </div>
+                <div>
+                  <label htmlFor="part-photo" className="font-mono text-xs uppercase tracking-[0.2em] text-white/75 block mb-2">
+                    Photo (optional)
+                  </label>
+                  <div className="flex items-center gap-3 border border-white/20 bg-white/10 px-4 py-3">
+                    <Paperclip aria-hidden="true" className="h-4 w-4 shrink-0 text-white/50" />
+                    <input
+                      id="part-photo"
+                      name="photo"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="w-full text-sm text-white/80 file:mr-3 file:border-0 file:bg-accent file:px-3 file:py-1.5 file:font-mono file:text-[10px] file:font-bold file:uppercase file:tracking-[0.14em] file:text-white"
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-white/45">JPG, PNG or WebP, up to 8 MB.</p>
+                </div>
               </div>
+              {error ? (
+                <div role="alert" className="border border-red-400/40 bg-red-500/10 p-3 text-sm leading-6 text-red-200">
+                  {error}
+                </div>
+              ) : null}
               <button
                 type="submit"
-                className="w-full flex items-center justify-center gap-3 px-7 py-5 bg-accent text-accent-foreground hover:bg-accent/90 transition-colors"
+                disabled={busy || !hydrated}
+                className="flex h-11 w-full items-center justify-center gap-2 bg-accent px-5 text-accent-foreground transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
-                <Send className="h-5 w-5" />
-                <span className="font-mono text-sm uppercase tracking-[0.2em] font-bold">
-                  Submit Request
+                <Send className="h-4 w-4" />
+                <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em]">
+                  {busy ? "Sending" : "Submit Request"}
                 </span>
               </button>
             </form>
+            )}
 
-            <div className="space-y-6">
-              <h3 className="font-display text-2xl font-bold uppercase tracking-tight text-white">
-                Or contact us directly
+            <div className="border border-white/10 bg-white/[0.035] p-4 sm:p-5 md:p-6">
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/55">
+                Other contact options
+              </div>
+              <h3 className="mt-2 font-display text-lg font-bold text-white">
+                Contact the sales desk directly
               </h3>
-              <div className="grid grid-cols-1 gap-4">
+              <p className="mt-2 text-sm leading-6 text-white/65">
+                Email for detailed enquiries or use WhatsApp when you need to send a product photo.
+              </p>
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                 <a
                   href={`mailto:${SITE.email}`}
-                  className="relative flex items-center justify-center px-16 py-5 bg-accent text-accent-foreground hover:bg-accent/90 transition-colors"
+                  className="flex h-11 items-center justify-center gap-2 border border-accent bg-accent px-4 text-accent-foreground transition-colors hover:bg-accent/90"
                 >
-                  <Mail className="absolute left-7 h-6 w-6" />
-                  <span className="text-center font-mono text-sm uppercase tracking-[0.2em] font-bold">
-                    Contact via Email
+                  <Mail className="h-4 w-4 shrink-0" />
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em]">
+                    Email sales
                   </span>
                 </a>
                 <a
                   href={whatsappHref("Hello Spares Automation, I need help identifying a part.")}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="relative flex items-center justify-center bg-[#25D366] px-16 py-5 text-charcoal-deep transition-colors hover:bg-[#25D366]/85"
+                  className="flex h-11 items-center justify-center gap-2 border border-[#25D366] bg-[#25D366] px-4 text-charcoal-deep transition-colors hover:bg-[#25D366]/85"
                 >
-                  <MessageSquare className="absolute left-7 h-6 w-6" />
-                  <span className="text-center font-mono text-sm uppercase tracking-[0.2em] font-bold">
-                    Contact via WhatsApp
+                  <MessageSquare className="h-4 w-4 shrink-0" />
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em]">
+                    WhatsApp
                   </span>
                 </a>
               </div>

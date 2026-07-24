@@ -38,6 +38,60 @@ The July UX audit remediation is now implemented while retaining the existing in
 
 This document records the website changes implemented from the client feedback in `spares automation snags 10 July 2026.docx`.
 
+## CMS & Admin Panel Runbook
+
+The website forms (part inquiry, trade account, credit account, and support requests) are now handled by a lightweight CMS instead of `mailto:` links. Submissions are stored in Postgres and managed by staff at `/admin`. **Orders always stay in Shopify** — the CMS only manages applications, inquiries, and support requests. Approved trade/credit applications are synced to Shopify as tagged customers; staff then raise draft orders / invoices in Shopify.
+
+### Environment variables
+
+See `.env.example`. Key CMS variables:
+
+- `DATABASE_URL` — Postgres connection string (required for forms and `/admin`).
+- `APP_DATABASE_URL` — optional Docker Compose override for a managed database;
+  Compose otherwise connects to its bundled `db` service automatically.
+- `ADMIN_SEED_EMAIL` / `ADMIN_SEED_PASSWORD` — first admin account, seeded automatically on first boot when no staff exist.
+- `APP_SESSION_SECRET` — encrypts the admin (and customer) session cookies. Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+- `RESEND_API_KEY` (recommended) **or** `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS` — transactional email for sales-desk notifications. If neither is set, submissions are still stored but notification emails are skipped with a logged warning.
+- `MAIL_FROM` / `SALES_DESK_EMAIL` — sender and recipient for notifications.
+- `UPLOAD_DIR` — local storage for part-inquiry photos (default `./data/uploads`).
+- Shopify Admin token needs `write_customers`, `write_customer_metafields`, and `write_draft_orders` scopes for the customer handoff and quote flow.
+
+### Migrations
+
+Migrations run automatically and idempotently on server boot (`src/lib/db/migrate.server.ts`), reading the SQL files in `drizzle/`. The Docker runtime image copies the `drizzle/` folder so migrations apply on startup. To generate a new migration after schema changes:
+
+```
+npx drizzle-kit generate
+```
+
+### Admin seeding & access
+
+On first boot, if `staff_users` is empty and `ADMIN_SEED_EMAIL`/`ADMIN_SEED_PASSWORD` are set, an `admin` account is created. Staff sign in at `/admin/login`; unauthenticated visits to `/admin/*` redirect there.
+
+### Persistent storage
+
+Part-inquiry photo uploads are written to `UPLOAD_DIR`. The Compose stack mounts
+the persistent `cms_data` volume at `/app/data` and stores the bundled Postgres
+database in `cms_db`; both survive rebuilds and redeployments.
+
+### Coolify deployment
+
+Create a Docker Compose resource from this repository and assign the public
+domain to the `app` service on container port `80`. The `db` service is private
+and must not be assigned a domain. Coolify generates
+`SERVICE_PASSWORD_POSTGRES`; the same value is used by both services.
+
+Before the first deployment, set `ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD`, and
+`APP_SESSION_SECRET` in Coolify. Add the email and Shopify variables described
+above as required by the enabled integrations. Keep those values runtime-only.
+When using an external managed PostgreSQL database, set `APP_DATABASE_URL`;
+otherwise leave it empty to use the bundled persistent database.
+
+The app exposes `/health`, which checks PostgreSQL connectivity. Coolify uses
+the Compose health checks for readiness and safe rolling replacement. Neither
+Postgres nor the Node process publishes a host port; Coolify's proxy reaches
+the app over its internal network.
+
 ## Summary
 
 - Cleaned the homepage, header, category cards, products page, footer links, support pages, resources access, and cart quote flow.
@@ -56,6 +110,9 @@ This document records the website changes implemented from the client feedback i
 - Removed extra marketing copy under the Asphalt/Blacktop and Ready-Mix/Concrete homepage cards.
 - Simplified the image overlays so category options sit cleanly over the full image.
 - Added homepage links for `PDFs & Manuals` and `Videos`, both pointing to `/resources`.
+- Replaced `New Arrivals` with `Control Panels & Software`; the legacy URL redirects to the new catalogue route.
+- Aligned homepage asphalt labels with the approved product-line list and removed internal sub-category/vertical wording.
+- Clarified that photos are attached through email or WhatsApp and that cart details are emailed from a populated cart.
 - Reduced the homepage help section heading size so it is less oversized.
 - Documented replacement image guidance in code: Packing/Home category photos should be landscape, `4:3` or `16:10`, minimum `1200px` wide.
 
