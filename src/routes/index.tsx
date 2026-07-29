@@ -4,9 +4,10 @@ import { useState, type FormEvent } from "react";
 
 import asphalt from "@/assets/asphalt-plant.jpg";
 import concrete from "@/assets/concrete-plant.jpg";
-import catAutomation from "@/assets/cat-automation.jpg";
-import catHome from "@/assets/cat-home.jpg";
-import catPacking from "@/assets/cat-packing.jpg";
+import catAutomation from "@/assets/Automation pic.jpg";
+import catControls from "@/assets/Control panels and software pic.jpg";
+import catHome from "@/assets/Home automation pic.jpg";
+import catPacking from "@/assets/packing machines pic.jpg";
 import { SiteFooter } from "@/components/shopify/SiteFooter";
 import { SiteHeader } from "@/components/shopify/SiteHeader";
 import { submitPartInquiry, uploadPartInquiryPhoto } from "@/lib/api/cms.functions";
@@ -36,10 +37,10 @@ const primaryRanges = [
     to: "/asphalt",
     accent: "accent",
     lines: [
-      { label: "Aggregate Feeding", meta: "Hoppers / Belts / Conveyors", href: "/asphalt?line=feeders" },
+      { label: "Aggregate feeding", meta: "Hoppers / Belts / Conveyors", href: "/asphalt?line=feeders" },
       { label: "Burner / Drying", meta: "Nozzles / Fuel pumps", href: "/asphalt?line=burner-drying" },
       { label: "Bitumen", meta: "Pumps / Valves / Hoses", href: "/asphalt?line=bitumen" },
-      { label: "Hot Storage / Silos", meta: "Hot bins / Storage", href: "/asphalt?line=hot-stone-silos" },
+      { label: "Hot storage / silos", meta: "Hot bins / Storage", href: "/asphalt?line=hot-stone-silos" },
       { label: "Baghouse", meta: "Filters / Bags / Dust", href: "/asphalt?line=baghouse" },
       { label: "Mixing Tower", meta: "Flights / Liners / Seals", href: "/asphalt?line=mixing-tower" },
     ],
@@ -65,7 +66,7 @@ const categories = [
   { title: "Packing Machinery", img: catPacking, to: "/packing" },
   { title: "Automation & Drives", img: catAutomation, to: "/automation" },
   { title: "Home Automation and Controls", img: catHome, to: "/home-controls" },
-  { title: "Control Panels & Software", img: catAutomation, to: "/control-panels-software" },
+  { title: "Control Panels & Software", img: catControls, to: "/control-panels-software" },
 ];
 
 function HeroTitle({ title, accent }: { title: string; accent: "accent" | "amber" }) {

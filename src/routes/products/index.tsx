@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpDown, ChevronRight, Filter, SlidersHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import automation from "@/assets/cat-automation.jpg";
+import automation from "@/assets/Automation pic.jpg";
 import { ProductCard } from "@/components/shopify/ProductCard";
 import { SiteFooter } from "@/components/shopify/SiteFooter";
 import { SiteHeader } from "@/components/shopify/SiteHeader";

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { CollectionPage } from "@/components/shopify/CollectionPage";
 import { getCollection, getLatestProducts } from "@/lib/api/shopify.functions";
-import packing from "@/assets/cat-packing.jpg";
+import packing from "@/assets/packing machines pic.jpg";
 import { SITE } from "@/lib/site";
 
 const collectionHandle = "packing";

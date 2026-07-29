@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import controls from "@/assets/cat-automation.jpg";
+import controls from "@/assets/Control panels and software pic.jpg";
 import { CollectionPage } from "@/components/shopify/CollectionPage";
 import { getCollection, getLatestProducts } from "@/lib/api/shopify.functions";
 import { SITE } from "@/lib/site";

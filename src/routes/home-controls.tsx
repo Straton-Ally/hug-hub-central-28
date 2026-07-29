@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { CollectionPage } from "@/components/shopify/CollectionPage";
 import { getCollection, getLatestProducts } from "@/lib/api/shopify.functions";
-import homeImg from "@/assets/cat-home.jpg";
+import homeImg from "@/assets/Home automation pic.jpg";
 import { SITE } from "@/lib/site";
 
 const collectionHandle = "home-controls";

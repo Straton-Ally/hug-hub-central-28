@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { CollectionPage } from "@/components/shopify/CollectionPage";
 import { getLatestProducts } from "@/lib/api/shopify.functions";
-import automation from "@/assets/cat-automation.jpg";
+import automation from "@/assets/Automation pic.jpg";
 
 export const Route = createFileRoute("/search")({
   validateSearch: (search: Record<string, unknown>) => ({
