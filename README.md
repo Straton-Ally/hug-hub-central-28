@@ -81,6 +81,11 @@ domain to the `app` service on container port `80`. The `db` service is private
 and must not be assigned a domain. Coolify generates
 `SERVICE_PASSWORD_POSTGRES`; the same value is used by both services.
 
+For local development, `docker-compose.override.yml` publishes the app at
+`http://localhost:${APP_PORT:-8080}`. Coolify deploys `docker-compose.yml`
+directly, leaving the host port unpublished so its proxy can route to port 80
+without colliding with another application.
+
 Before the first deployment, set `ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD`, and
 `APP_SESSION_SECRET` in Coolify. Add the email and Shopify variables described
 above as required by the enabled integrations. Keep those values runtime-only.
