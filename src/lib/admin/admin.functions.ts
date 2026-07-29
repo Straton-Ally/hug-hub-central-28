@@ -19,11 +19,12 @@ import {
   type SubmissionStatus,
   type SubmissionType,
 } from "../db/schema";
+import { sendEmail } from "../notify.server";
 import {
   syncCreditCustomer,
-  syncTradeCustomer,
   type CustomerSyncMetafield,
 } from "../shopify/customer-sync.server";
+import { SITE } from "../site";
 
 /**
  * Admin (staff) server functions. Every function that reads or mutates
@@ -85,8 +86,8 @@ export const adminLogout = createServerFn({ method: "POST" }).handler(async () =
 
 const submissionTypeValues = [
   "part_inquiry",
-  "trade_account",
   "credit_account",
+  "return_request",
   "support_tracking",
   "support_resources",
   "support_question",
@@ -143,21 +144,22 @@ export const listSubmissions = createServerFn({ method: "GET" })
     }
 
     const db = getDb();
-    const filters = [];
+    // Preserve legacy rows in Postgres while keeping the removed feature out
+    // of the active admin application.
+    const filters = [sql`${submissions.type} <> 'trade_account'`];
     if (data.type) filters.push(eq(submissions.type, data.type));
     if (data.status) filters.push(eq(submissions.status, data.status));
     if (data.search) {
       const term = `%${data.search}%`;
-      filters.push(
-        or(
-          ilike(submissions.reference, term),
-          ilike(submissions.contactEmail, term),
-          ilike(submissions.contactName, term),
-          ilike(submissions.company, term),
-        ),
+      const searchFilter = or(
+        ilike(submissions.reference, term),
+        ilike(submissions.contactEmail, term),
+        ilike(submissions.contactName, term),
+        ilike(submissions.company, term),
       );
+      if (searchFilter) filters.push(searchFilter);
     }
-    const where = filters.length ? and(...filters) : undefined;
+    const where = and(...filters);
 
     const [totalRow] = await db
       .select({ value: count() })
@@ -169,6 +171,7 @@ export const listSubmissions = createServerFn({ method: "GET" })
     const countRows = await db
       .select({ status: submissions.status, value: count() })
       .from(submissions)
+      .where(sql`${submissions.type} <> 'trade_account'`)
       .groupBy(submissions.status);
     const counts: Record<SubmissionStatus, number> = {
       new: 0,
@@ -269,7 +272,12 @@ export const getSubmissionDetail = createServerFn({ method: "GET" })
       })
       .from(submissions)
       .leftJoin(staffUsers, eq(submissions.reviewedBy, staffUsers.id))
-      .where(eq(submissions.id, data.id))
+      .where(
+        and(
+          eq(submissions.id, data.id),
+          sql`${submissions.type} <> 'trade_account'`,
+        ),
+      )
       .limit(1);
 
     const row = rows[0];
@@ -349,6 +357,20 @@ export const setSubmissionStatus = createServerFn({ method: "POST" })
     }
 
     const db = getDb();
+    const [existing] = await db
+      .select({
+        type: submissions.type,
+        status: submissions.status,
+        reference: submissions.reference,
+        contactEmail: submissions.contactEmail,
+        payload: submissions.payload,
+      })
+      .from(submissions)
+      .where(eq(submissions.id, data.id))
+      .limit(1);
+
+    if (!existing) return { ok: false, error: "Submission not found." };
+
     await db
       .update(submissions)
       .set({
@@ -358,6 +380,41 @@ export const setSubmissionStatus = createServerFn({ method: "POST" })
         updatedAt: sql`now()`,
       })
       .where(eq(submissions.id, data.id));
+
+    if (existing.type === "return_request" && existing.status !== data.status) {
+      const orderNumber = String(existing.payload["Order number"] ?? "").trim();
+      const fallbackReference = orderNumber || `request ${data.id}`;
+      const statusMessage: Record<SubmissionStatus, string> = {
+        new: "Your return request is waiting for review.",
+        in_review:
+          "Our returns team is reviewing your request. We will contact you if we need more information.",
+        approved:
+          "Your return request has been approved. Please follow the return instructions sent by our team before dispatching the goods.",
+        rejected:
+          "We are unable to approve this return request in its current form. Reply to this email if you would like the team to review additional information.",
+        completed:
+          "Your return request has been completed. Any agreed refund, replacement, or repair will follow the arrangements confirmed by our team.",
+      };
+
+      await sendEmail({
+        to: existing.contactEmail,
+        replyTo: SITE.email,
+        subject: `Return update: ${existing.reference ?? fallbackReference}`,
+        text: [
+          "Your return request has been updated.",
+          "",
+          `Reference: ${existing.reference ?? `Submission ${data.id}`}`,
+          orderNumber ? `Order: ${orderNumber}` : "",
+          `Status: ${data.status.replaceAll("_", " ")}`,
+          "",
+          statusMessage[data.status],
+          "",
+          `${SITE.name} · ${SITE.email} · ${SITE.phoneDisplay}`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      });
+    }
     return { ok: true };
   });
 
@@ -429,7 +486,7 @@ function payloadString(payload: Record<string, unknown>, key: string): string | 
 }
 
 /**
- * Create a tagged Shopify customer from an approved trade/credit application.
+ * Create a tagged Shopify customer from an approved credit application.
  * Orders and invoicing remain in Shopify; this only provisions the customer.
  */
 export const syncSubmissionToShopify = createServerFn({ method: "POST" })
@@ -451,14 +508,13 @@ export const syncSubmissionToShopify = createServerFn({ method: "POST" })
       .limit(1);
     const submission = rows[0];
     if (!submission) return { ok: false, error: "Submission not found." };
-    if (submission.type !== "trade_account" && submission.type !== "credit_account") {
-      return { ok: false, error: "Only trade or credit applications can be synced." };
+    if (submission.type !== "credit_account") {
+      return { ok: false, error: "Only credit applications can be synced." };
     }
     if (submission.shopifyCustomerId) {
       return { ok: false, error: "This application has already been synced." };
     }
 
-    const isCredit = submission.type === "credit_account";
     const payload = submission.payload as Record<string, unknown>;
     const [firstName, ...rest] = (submission.contactName ?? "").split(" ");
     const lastName = rest.join(" ") || undefined;
@@ -475,19 +531,17 @@ export const syncSubmissionToShopify = createServerFn({ method: "POST" })
     if (companyNumber) metafields.push({ key: "company_number", value: companyNumber });
     const vatNumber = payloadString(payload, "VAT number");
     if (vatNumber) metafields.push({ key: "vat_number", value: vatNumber });
-    if (isCredit) {
-      const creditLimit = payloadString(payload, "Requested credit limit");
-      if (creditLimit) metafields.push({ key: "credit_limit", value: creditLimit });
-    }
+    const creditLimit = payloadString(payload, "Requested credit limit");
+    if (creditLimit) metafields.push({ key: "credit_limit", value: creditLimit });
 
     const note = [
-      isCredit ? "Credit account application (approved)" : "Trade account application (approved)",
+      "Credit account application (approved)",
       submission.reference ? `Reference: ${submission.reference}` : "",
       submission.company ? `Company: ${submission.company}` : "",
       payloadString(payload, "Billing address")
         ? `Billing address: ${payloadString(payload, "Billing address")}`
         : "",
-      isCredit && payloadString(payload, "Requested credit limit")
+      payloadString(payload, "Requested credit limit")
         ? `Requested credit limit: ${payloadString(payload, "Requested credit limit")}`
         : "",
     ]
@@ -495,8 +549,7 @@ export const syncSubmissionToShopify = createServerFn({ method: "POST" })
       .join("\n");
 
     try {
-      const syncCustomer = isCredit ? syncCreditCustomer : syncTradeCustomer;
-      const { customerId } = await syncCustomer({
+      const { customerId } = await syncCreditCustomer({
         email: submission.contactEmail,
         firstName,
         lastName,

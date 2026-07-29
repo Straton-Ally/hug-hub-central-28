@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { BriefcaseBusiness, CreditCard, Globe, Menu, Phone, Search, ShoppingCart, User, UserPlus, X } from "lucide-react";
+import { CreditCard, Globe, Menu, Phone, Search, ShoppingCart, User, UserPlus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { getShopifyCart, getShopifyCustomer } from "@/lib/api/shopify.functions";
@@ -159,14 +159,10 @@ function AccountApplicationLinks({ mobile = false }: { mobile?: boolean }) {
     : "flex min-h-7 items-center text-white/75 hover:text-white";
 
   return (
-    <div className={mobile ? "grid grid-cols-1 gap-2 sm:grid-cols-2" : "flex items-center gap-5"}>
+    <div className={mobile ? "grid grid-cols-1 gap-2" : "flex items-center gap-5"}>
       <Link to="/credit-account" className={`${className} gap-1.5`}>
         <CreditCard aria-hidden="true" className="h-4 w-4 shrink-0" />
         Open Credit Account
-      </Link>
-      <Link to="/trade-account" className={`${className} gap-1.5`}>
-        <BriefcaseBusiness aria-hidden="true" className="h-4 w-4 shrink-0" />
-        Open Trade Account
       </Link>
     </div>
   );

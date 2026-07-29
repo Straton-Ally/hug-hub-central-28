@@ -17,6 +17,7 @@ type InfoPageProps = {
   ctaLabel?: string;
   ctaTo?: string;
   showHero?: boolean;
+  compactHero?: boolean;
   children?: ReactNode;
 };
 
@@ -28,6 +29,7 @@ export function InfoPage({
   ctaLabel = "Contact sales",
   ctaTo = "/contact-us",
   showHero = true,
+  compactHero = false,
   children,
 }: InfoPageProps) {
   return (
@@ -37,14 +39,26 @@ export function InfoPage({
       <main id="main-content">
         {showHero ? (
           <section className="border-b border-rule bg-charcoal-deep text-white">
-            <div className="mx-auto max-w-[1200px] px-4 py-12 md:px-6 md:py-16">
+            <div
+              className={`mx-auto max-w-[1200px] px-4 md:px-6 ${
+                compactHero ? "py-8 md:py-10" : "py-12 md:py-16"
+              }`}
+            >
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/45">
                 {eyebrow}
               </div>
-              <h1 className="mt-4 max-w-4xl font-display text-3xl font-extrabold uppercase leading-tight tracking-tight md:text-5xl">
+              <h1
+                className={`max-w-4xl font-display font-extrabold uppercase leading-tight tracking-tight ${
+                  compactHero ? "mt-3 text-3xl md:text-4xl" : "mt-4 text-3xl md:text-5xl"
+                }`}
+              >
                 {title}
               </h1>
-              <p className="mt-5 max-w-3xl text-sm leading-7 text-white/60 md:text-base">
+              <p
+                className={`max-w-3xl text-sm leading-7 text-white/60 md:text-base ${
+                  compactHero ? "mt-3" : "mt-5"
+                }`}
+              >
                 {intro}
               </p>
             </div>

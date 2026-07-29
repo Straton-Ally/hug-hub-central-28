@@ -11,8 +11,8 @@ import {
 
 const TYPE_LABELS: Record<string, string> = {
   part_inquiry: "Part inquiry",
-  trade_account: "Trade account",
   credit_account: "Credit account",
+  return_request: "Return request",
   support_tracking: "Order tracking",
   support_resources: "Resource request",
   support_question: "Product question",

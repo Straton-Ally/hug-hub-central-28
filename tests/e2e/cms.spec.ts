@@ -49,23 +49,82 @@ test("credit account page exposes the credit application form", async ({ page })
   await expect(page.getByRole("textbox", { name: "Registered company name" })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Requested credit limit" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Submit application" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Apply for a trade account instead" })).toHaveAttribute(
-    "href",
-    "/trade-account",
-  );
-});
-
-test("trade account page links to the credit application", async ({ page }) => {
-  await page.goto("/trade-account");
-  await expect(page.getByRole("link", { name: "Apply for credit terms instead" })).toHaveAttribute(
-    "href",
-    "/credit-account",
-  );
 });
 
 test("homepage part inquiry form offers an optional photo upload", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByLabel("Photo (optional)")).toBeVisible();
+});
+
+test("product question form accepts multiple image and document attachments", async ({ page }) => {
+  await page.goto("/got-a-question");
+  const attachments = page.getByLabel("Attach files (optional)");
+  await expect(attachments).toBeVisible();
+  await expect(attachments).toHaveAttribute("multiple", "");
+  await expect(attachments).toHaveAttribute("accept", /application\/pdf/);
+  await expect(page.getByText("Maximum 10 MB each and 25 MB combined.")).toBeVisible();
+});
+
+test("returns page captures items, quantities, reasons, and contact details", async ({ page }) => {
+  await page.goto("/returns-policy");
+  await expect(page.getByRole("heading", { name: "Request a return" })).toBeVisible();
+  await expect(page.getByLabel("Order number *")).toBeVisible();
+  await expect(page.getByLabel("Product name or part number *")).toBeVisible();
+  await expect(page.getByLabel("Reason for return *")).toBeVisible();
+  await expect(page.getByLabel("Quantity *")).toHaveValue("1");
+  await expect(page.getByRole("button", { name: "Submit return request" })).toBeVisible();
+});
+
+test("return request persists in the CMS with an email reference", async ({ page }, testInfo) => {
+  test.skip(!cmsIntegrationConfigured, "CMS database test environment is not configured");
+
+  const unique = `${testInfo.project.name}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const email = `return-${unique}@example.com`;
+  const orderNumber = `#RET-${unique}`;
+  const sql = postgres(cmsTestEnv.databaseUrl!, { max: 1, prepare: false });
+
+  try {
+    await page.goto("/returns-policy", { waitUntil: "networkidle" });
+    await page.getByLabel("Order number *").fill(orderNumber);
+    await page.getByLabel("Product name or part number *").fill("Siemens return test");
+    await page.getByLabel("Quantity *").fill("2");
+    await page.getByLabel("Reason for return *").selectOption("damaged");
+    await page.getByLabel("What happened? (optional)").fill("Outer packaging damaged");
+    await page.getByLabel("Contact name *").fill("Returns E2E");
+    await page.getByLabel("Email address *").fill(email);
+    await page.getByRole("button", { name: "Submit return request" }).click();
+
+    await expect(page.getByText(/Your reference is SA-/)).toBeVisible({ timeout: 20_000 });
+
+    await expect
+      .poll(async () => {
+        const rows = await sql<{ type: string; order_number: string; items: string; total: string }[]>`
+          select type::text,
+                 payload->>'Order number' as order_number,
+                 payload->>'Items being returned' as items,
+                 payload->>'Total quantity' as total
+          from submissions
+          where contact_email = ${email}
+        `;
+        return rows[0];
+      })
+      .toMatchObject({
+        type: "return_request",
+        order_number: orderNumber,
+        total: "2",
+      });
+
+    const [row] = await sql<{ items: string }[]>`
+      select payload->>'Items being returned' as items
+      from submissions
+      where contact_email = ${email}
+    `;
+    expect(row.items).toContain("Siemens return test");
+    expect(row.items).toContain("Damaged in delivery");
+  } finally {
+    await sql`delete from submissions where contact_email = ${email}`.catch(() => undefined);
+    await sql.end({ timeout: 2 });
+  }
 });
 
 test("public submission persists and staff can review, update, and annotate it", async ({

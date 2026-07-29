@@ -9,7 +9,6 @@ const informationLinks = [
   { label: "About us", to: "/about-us" },
   { label: "View Cart", to: "/cart" },
   { label: "Build a Quote", to: "/quote" },
-  { label: "Open trade account", to: "/trade-account" },
   { label: "Track order", to: "/track-order" },
   { label: "My order history", to: "/account" },
   { label: "Got a question", to: "/got-a-question" },

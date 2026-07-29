@@ -18,7 +18,7 @@ type CategoryFilter = {
 
 const categoryFilters: CategoryFilter[] = [
   {
-    label: "Asphalt Spares",
+    label: "Asphalt / Blacktop Spares",
     handle: "asphalt",
     description: "Burners, conveyors, drum mixer wear parts",
   },
@@ -30,7 +30,7 @@ const categoryFilters: CategoryFilter[] = [
   {
     label: "Packing Machinery",
     handle: "packing",
-    description: "Sealers, rollers, belts, packing line parts",
+    description: "Automation and sensors, bag placement, filling, discharge and palletising",
   },
   {
     label: "Automation & Drives",

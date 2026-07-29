@@ -13,7 +13,7 @@ The July UX audit remediation is now implemented while retaining the existing in
 - Removed the unused second customer-account/OAuth implementation and kept the Storefront customer flow used by the visible login, registration, and account pages.
 - Added Shopify password recovery at `/forgot-password` and stopped returning customer access tokens to browser JavaScript.
 - Removed hardcoded delivery/lead-time promises and renamed mail-based quote actions so their behavior is explicit.
-- Added accessible request forms for tracking, resources, product questions, and unsubscribe requests.
+- Added accessible request forms for returns, tracking, resources, product questions, and unsubscribe requests.
 - Added responsive Shopify images, deferred third-party video loading, HTTPS-only resource links, and Product/Organization structured data.
 - Added route-specific metadata, canonical URLs, noindex rules, `robots.txt`, `sitemap.xml`, and a web manifest.
 - Added security headers in the Node response wrapper and corrected Docker output/env configuration for the current Nitro build.
@@ -40,7 +40,7 @@ This document records the website changes implemented from the client feedback i
 
 ## CMS & Admin Panel Runbook
 
-The website forms (part inquiry, trade account, credit account, and support requests) are now handled by a lightweight CMS instead of `mailto:` links. Submissions are stored in Postgres and managed by staff at `/admin`. **Orders always stay in Shopify** — the CMS only manages applications, inquiries, and support requests. Approved trade/credit applications are synced to Shopify as tagged customers; staff then raise draft orders / invoices in Shopify.
+The website forms (part inquiry, credit account, return request, and support requests) are handled by a lightweight CMS instead of `mailto:` links. Submissions are stored in Postgres and managed by staff at `/admin`. **Orders always stay in Shopify** — the CMS only manages applications, returns, inquiries, and support requests. Return requests receive a customer acknowledgement and later customer status emails when staff change their CMS status. Approved credit applications are synced to Shopify as tagged customers; staff then raise draft orders / invoices in Shopify.
 
 ### Environment variables
 
@@ -51,9 +51,9 @@ See `.env.example`. Key CMS variables:
   Compose otherwise connects to its bundled `db` service automatically.
 - `ADMIN_SEED_EMAIL` / `ADMIN_SEED_PASSWORD` — first admin account, seeded automatically on first boot when no staff exist.
 - `APP_SESSION_SECRET` — encrypts the admin (and customer) session cookies. Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
-- `RESEND_API_KEY` (recommended) **or** `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS` — transactional email for sales-desk notifications. If neither is set, submissions are still stored but notification emails are skipped with a logged warning.
+- `RESEND_API_KEY` (recommended) **or** `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS` — transactional email for sales-desk notifications, return acknowledgements, and return status updates. If neither is set, submissions are still stored but notification emails are skipped with a logged warning.
 - `MAIL_FROM` / `SALES_DESK_EMAIL` — sender and recipient for notifications.
-- `UPLOAD_DIR` — local storage for part-inquiry photos (default `./data/uploads`).
+- `UPLOAD_DIR` — private local storage for part-inquiry photos and product-question attachments (default `./data/uploads`).
 - Shopify Admin token needs `write_customers`, `write_customer_metafields`, and `write_draft_orders` scopes for the customer handoff and quote flow.
 
 ### Migrations
@@ -140,7 +140,6 @@ proxy reaches the app over its internal network.
 - Rewired footer links to real dedicated routes instead of unrelated placeholder destinations.
 - Added these new routes:
   - `/resources`
-  - `/trade-account`
   - `/track-order`
   - `/got-a-question`
   - `/terms-and-conditions`
@@ -171,7 +170,6 @@ proxy reaches the app over its internal network.
 - `src/routes/concrete.tsx`
 - `src/routes/cart.tsx`
 - `src/routes/resources.tsx`
-- `src/routes/trade-account.tsx`
 - `src/routes/track-order.tsx`
 - `src/routes/got-a-question.tsx`
 - `src/routes/terms-and-conditions.tsx`
@@ -193,7 +191,6 @@ proxy reaches the app over its internal network.
   - `/concrete`
   - `/cart`
   - `/resources`
-  - `/trade-account`
   - `/track-order`
   - `/terms-and-conditions`
 

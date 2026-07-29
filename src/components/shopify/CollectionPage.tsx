@@ -21,6 +21,7 @@ type CollectionPageProps = {
   collection: ShopifyCollection | null;
   fallbackProducts?: ShopifyProduct[];
   expectedHandle: string;
+  rangeTitle?: string;
   productLines?: ProductLineFilter[];
   activeLine?: string;
 };
@@ -34,13 +35,13 @@ export function CollectionPage({
   collection,
   fallbackProducts = [],
   expectedHandle,
+  rangeTitle,
   productLines = [],
   activeLine,
 }: CollectionPageProps) {
   const products = collection?.products ?? fallbackProducts;
   const selectedLine = productLines.find((line) => line.slug === activeLine);
   const visibleProducts = selectedLine ? products.filter((product) => matchesLine(product, selectedLine)) : products;
-  const accentClass = accent === "amber" ? "text-amber" : "text-accent";
   const bgAccentClass = accent === "amber" ? "bg-amber" : "bg-accent";
 
   return (
@@ -61,8 +62,7 @@ export function CollectionPage({
             {eyebrow}
           </div>
           <h1 className="break-words font-display text-[clamp(1.45rem,5vw,2.5rem)] font-extrabold uppercase leading-none tracking-tight text-white">
-            {title}{" "}
-            <span className={accentClass}>{collection?.title ? "CATALOGUE" : "SPARES"}</span>
+            {title}
           </h1>
         </div>
       </section>
@@ -74,7 +74,7 @@ export function CollectionPage({
               Product Range
             </div>
             <h2 className="mt-1 md:mt-2 font-display text-xl md:text-2xl font-bold uppercase tracking-tight">
-              {collection?.title ?? expectedHandle}
+              {rangeTitle ?? collection?.title ?? expectedHandle}
             </h2>
           </div>
           <Link

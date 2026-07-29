@@ -36,10 +36,10 @@ const primaryRanges = [
     to: "/asphalt",
     accent: "accent",
     lines: [
-      { label: "Feeders", meta: "Belts / Idlers / Drives", href: "/asphalt?line=feeders" },
+      { label: "Aggregate Feeding", meta: "Hoppers / Belts / Conveyors", href: "/asphalt?line=feeders" },
       { label: "Burner / Drying", meta: "Nozzles / Fuel pumps", href: "/asphalt?line=burner-drying" },
       { label: "Bitumen", meta: "Pumps / Valves / Hoses", href: "/asphalt?line=bitumen" },
-      { label: "Hot Stone / Silos", meta: "Hot bins / Storage", href: "/asphalt?line=hot-stone-silos" },
+      { label: "Hot Storage / Silos", meta: "Hot bins / Storage", href: "/asphalt?line=hot-stone-silos" },
       { label: "Baghouse", meta: "Filters / Bags / Dust", href: "/asphalt?line=baghouse" },
       { label: "Mixing Tower", meta: "Flights / Liners / Seals", href: "/asphalt?line=mixing-tower" },
     ],

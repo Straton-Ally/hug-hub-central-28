@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("homepage remains within the viewport and exposes working navigation", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Industrial parts and automation spares");
-  await expect(page.getByRole("link", { name: "Feeders" })).toHaveAttribute("href", "/asphalt?line=feeders");
+  await expect(page.getByRole("link", { name: "Aggregate feeding" }).first()).toHaveAttribute("href", "/asphalt?line=feeders");
   await expect(page.getByRole("link", { name: /Control Panels & Software/i })).toHaveAttribute("href", "/control-panels-software");
   await expect(page.getByText("Browse sub-categories", { exact: true })).toHaveCount(0);
   await expect(page.getByText(/Sub-categories -/i)).toHaveCount(0);
@@ -50,18 +50,24 @@ test("contact methods are actionable and consistent", async ({ page }) => {
   await expect(page.getByRole("link", { name: /Email Enquiries/ })).toHaveAttribute("href", "mailto:trade@spares-automation.co.uk");
 });
 
-test("account application links precede sign in in the top bar", async ({ page, isMobile }) => {
+test("credit account link precedes sign in in the top bar", async ({ page, isMobile }) => {
   test.skip(isMobile, "Desktop top bar test");
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   const credit = page.getByRole("link", { name: "Open Credit Account", exact: true });
-  const trade = page.getByRole("link", { name: "Open Trade Account", exact: true }).first();
   const signIn = page.getByRole("link", { name: "Sign in", exact: true });
   await expect(credit).toHaveAttribute("href", "/credit-account");
-  await expect(trade).toHaveAttribute("href", "/trade-account");
-  const order = await Promise.all([credit, trade, signIn].map((link) => link.evaluate((element) => element.getBoundingClientRect().left)));
+  const order = await Promise.all([credit, signIn].map((link) => link.evaluate((element) => element.getBoundingClientRect().left)));
   expect(order[0]).toBeLessThan(order[1]);
-  expect(order[1]).toBeLessThan(order[2]);
+});
+
+test("trade account entry points and route are removed", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: /open trade account/i })).toHaveCount(0);
+  await expect(page.locator("footer").getByRole("link", { name: /trade account/i })).toHaveCount(0);
+
+  const response = await page.goto("/trade-account");
+  expect(response?.status()).toBe(404);
 });
 
 test("registration form stays inside a 320px phone viewport", async ({ page }) => {
@@ -85,7 +91,7 @@ test("touch tablets keep homepage category choices visible", async ({ browser, i
   const page = await context.newPage();
   await page.goto("/");
   await expect(page.locator(".hero-range-panel").first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "Feeders" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Aggregate feeding" }).first()).toBeVisible();
   await context.close();
 });
 
@@ -143,14 +149,41 @@ test("every product exposes tabbed support content and useful empty states", asy
   await page.waitForLoadState("networkidle");
   await expect(page.getByText("PayPal accepted", { exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: "PayPal", exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Excl. VAT", { exact: true })).toBeVisible();
+  await expect(page.getByText("Incl. VAT (20%)", { exact: true })).toBeVisible();
+
+  const exclusivePrice = Number(
+    (await page.getByText("Excl. VAT", { exact: true }).locator("..").locator(".font-display").textContent())
+      ?.replace(/[^\d.]/g, ""),
+  );
+  const inclusivePrice = Number(
+    (await page.getByText("Incl. VAT (20%)", { exact: true }).locator("..").locator(".font-display").textContent())
+      ?.replace(/[^\d.]/g, ""),
+  );
+  expect(inclusivePrice).toBeCloseTo(exclusivePrice * 1.2, 2);
+
+  await page.getByRole("button", { name: /^Enlarge / }).click();
+  const imageViewer = page.getByRole("dialog");
+  await expect(imageViewer).toBeVisible();
+  await imageViewer.getByRole("button", { name: "Zoom in" }).click();
+  await expect(imageViewer.getByText("Zoom 150%")).toBeVisible();
+  await imageViewer.getByRole("button", { name: "Close" }).click();
+  await expect(imageViewer).toBeHidden();
 
   const videoTab = page.getByRole("tab", { name: "Video Guide" });
   const pdfTab = page.getByRole("tab", { name: "PDF Guide" });
-  const descriptionTab = page.getByRole("tab", { name: "Description" });
+  const descriptionTab = page.getByRole("tab", { name: "Product Details" });
   await expect(videoTab).toBeVisible();
   await expect(pdfTab).toBeVisible();
   await expect(descriptionTab).toBeVisible();
-  await expect(videoTab).toHaveAttribute("aria-selected", "true");
+  await expect(descriptionTab).toHaveAttribute("aria-selected", "true");
+
+  const tabLabels = await page.getByRole("tab").allTextContents();
+  expect(tabLabels.map((label) => label.trim())).toEqual([
+    "Product Details",
+    "PDF Guide",
+    "Video Guide",
+  ]);
 
   await pdfTab.click();
   await expect(pdfTab).toHaveAttribute("aria-selected", "true");
@@ -159,6 +192,34 @@ test("every product exposes tabbed support content and useful empty states", asy
   await descriptionTab.click();
   await expect(descriptionTab).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("tabpanel")).not.toBeEmpty();
+
+  const supportBox = await page.getByRole("heading", { name: "Product Support" }).boundingBox();
+  const questionBox = await page.getByRole("heading", { name: "Got a question?" }).boundingBox();
+  expect(supportBox).not.toBeNull();
+  expect(questionBox).not.toBeNull();
+  expect(questionBox!.y).toBeGreaterThan(supportBox!.y);
+});
+
+test("YouTube videos require disclaimer consent before loading", async ({ page }) => {
+  await page.goto("/products/siemens-burners-qrb3-flame-detector");
+  await page.getByRole("tab", { name: "Video Guide" }).click();
+
+  await expect(page.getByRole("heading", { name: "YouTube video disclaimer" })).toBeVisible();
+  await expect(page.locator('iframe[src*="youtube-nocookie.com"]')).toHaveCount(0);
+
+  const consent = page.getByRole("checkbox", {
+    name: /I understand this disclaimer and agree to load the YouTube video/i,
+  });
+  const loadVideo = page.getByRole("button", { name: "Agree and load YouTube video" });
+  await expect(consent).not.toBeChecked();
+  await expect(loadVideo).toBeDisabled();
+
+  await consent.check();
+  await expect(loadVideo).toBeEnabled();
+  await loadVideo.click();
+
+  await expect(page.locator('iframe[src*="youtube-nocookie.com"]')).toBeVisible();
+  await expect(page.getByRole("heading", { name: "YouTube video disclaimer" })).toHaveCount(0);
 });
 
 test("customers can build a quote from a product", async ({ page }) => {
@@ -179,12 +240,12 @@ test("customers can build a quote from a product", async ({ page }) => {
 
 test("category labels and legacy route match the approved catalogue wording", async ({ page }) => {
   await page.goto("/asphalt");
-  const hero = page.getByRole("heading", { name: /asphalt.*(?:spares|catalogue)/i }).locator("xpath=ancestor::section[1]");
+  const hero = page.getByRole("heading", { name: "Asphalt / Blacktop", exact: true }).locator("xpath=ancestor::section[1]");
   const box = await hero.boundingBox();
   expect(box).not.toBeNull();
   expect(box!.height).toBeLessThanOrEqual(181);
 
-  for (const label of ["Feeders", "Burner / Drying", "Bitumen", "Hot Stone / Silos", "Baghouse", "Mixing Tower"]) {
+  for (const label of ["Aggregate feeding", "Burner / Drying", "Bitumen", "Hot storage / silos", "Baghouse", "Mixing Tower"]) {
     await expect(page.getByRole("link", { name: label, exact: true })).toBeVisible();
   }
   await expect(page.getByText(/Heavy Plant|Vertical 01/i)).toHaveCount(0);
@@ -268,16 +329,7 @@ test("information pages use completed compact content flows", async ({ page }) =
   await expect(page.locator("main img")).toHaveCount(0);
 });
 
-test("trade and tracking pages collect the required details", async ({ page }) => {
-  await page.goto("/trade-account");
-  await expect(page.getByRole("heading", { name: "Apply for a trade account" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "What you will need" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Review and approval" })).toHaveCount(0);
-  await expect(page.getByRole("textbox", { name: "Registered company name" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Company registration number" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "VAT number" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Submit application" })).toBeVisible();
-
+test("tracking page collects the required details", async ({ page }) => {
   await page.goto("/track-order");
   await expect(page.getByRole("textbox", { name: "Order number" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Send request" })).toBeVisible();

@@ -1,10 +1,22 @@
 import type { ShopifyMoney, ShopifyProduct } from "./types";
 
+export const STANDARD_VAT_RATE = 0.2;
+
 export function formatMoney(money: ShopifyMoney) {
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency: money.currencyCode,
   }).format(Number(money.amount));
+}
+
+export function addVat(
+  money: ShopifyMoney,
+  vatRate = STANDARD_VAT_RATE,
+): ShopifyMoney {
+  return {
+    amount: (Number(money.amount) * (1 + vatRate)).toFixed(2),
+    currencyCode: money.currencyCode,
+  };
 }
 
 export function formatProductPrice(product: Pick<ShopifyProduct, "priceRange">) {
