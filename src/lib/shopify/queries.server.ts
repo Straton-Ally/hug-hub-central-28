@@ -486,6 +486,11 @@ export async function getCustomer(customerAccessToken: string) {
       email?: string | null;
       phone?: string | null;
       tags?: string[];
+      defaultAddress?: {
+        company?: string | null;
+        phone?: string | null;
+      } | null;
+      companyMetafield?: { value: string } | null;
     } | null;
   }>(
     `#graphql
@@ -498,6 +503,13 @@ export async function getCustomer(customerAccessToken: string) {
           email
           phone
           tags
+          defaultAddress {
+            company
+            phone
+          }
+          companyMetafield: metafield(namespace: "spares_automation", key: "company") {
+            value
+          }
         }
       }
     `,

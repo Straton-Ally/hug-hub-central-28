@@ -19,6 +19,16 @@ export function addVat(
   };
 }
 
+export function calculateVat(
+  money: ShopifyMoney,
+  vatRate = STANDARD_VAT_RATE,
+): ShopifyMoney {
+  return {
+    amount: (Number(money.amount) * vatRate).toFixed(2),
+    currencyCode: money.currencyCode,
+  };
+}
+
 export function formatProductPrice(product: Pick<ShopifyProduct, "priceRange">) {
   const min = product.priceRange.minVariantPrice;
   const max = product.priceRange.maxVariantPrice;

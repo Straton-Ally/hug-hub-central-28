@@ -7,9 +7,16 @@ import { SITE } from "@/lib/site";
 
 const collectionHandle = "home-controls";
 const productLines = [
-  { slug: "relays", label: "Relays", keywords: ["relay", "module"] },
-  { slug: "sensors", label: "Sensors", keywords: ["sensor", "temperature", "hvac"] },
-  { slug: "power-supplies", label: "Power Supplies", keywords: ["power", "supply", "24v", "din"] },
+  {
+    slug: "lighting",
+    label: "Lighting",
+    keywords: ["lighting", "light", "lamp", "led", "dimmer"],
+  },
+  {
+    slug: "security",
+    label: "Security",
+    keywords: ["security", "alarm", "camera", "cctv", "access control", "motion detector"],
+  },
 ];
 
 export const Route = createFileRoute("/home-controls")({

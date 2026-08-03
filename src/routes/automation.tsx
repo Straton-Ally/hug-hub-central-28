@@ -7,10 +7,18 @@ import { SITE } from "@/lib/site";
 
 const collectionHandle = "automation";
 const productLines = [
-  { slug: "drives", label: "Drives", keywords: ["vfd", "drive", "motor"] },
-  { slug: "plc", label: "PLC Modules", keywords: ["plc", "input", "module"] },
+  { slug: "contactors", label: "Contactors", keywords: ["contactor"] },
   { slug: "sensors", label: "Sensors", keywords: ["sensor", "proximity", "m18"] },
-  { slug: "control-cabinet", label: "Control Cabinet", keywords: ["contactor", "relay", "cabinet"] },
+  {
+    slug: "buttons-switches",
+    label: "Buttons/Switches",
+    keywords: ["button", "pushbutton", "push button", "switch", "selector"],
+  },
+  {
+    slug: "inverter-drives",
+    label: "Inverter Drives",
+    keywords: ["inverter", "drive", "vfd", "variable frequency"],
+  },
 ];
 
 export const Route = createFileRoute("/automation")({

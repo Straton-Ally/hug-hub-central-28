@@ -54,18 +54,18 @@ function DeliveryPage() {
       <SiteHeader />
       <main id="main-content">
         <section className="border-b border-rule bg-ink text-white">
-          <div className="mx-auto max-w-[1200px] px-4 py-12 md:px-6 md:py-16">
+          <div className="mx-auto max-w-[1200px] px-4 py-8 md:px-6 md:py-10">
             <p className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-accent">
               Delivery information
             </p>
-            <h1 className="mt-4 max-w-4xl font-display text-4xl font-extrabold uppercase leading-[0.95] tracking-tight md:text-6xl">
+            <h1 className="mt-3 max-w-4xl font-display text-3xl font-extrabold uppercase leading-tight tracking-tight md:text-4xl">
               Clear costs and traceable delivery
             </h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-white/70">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 md:text-base">
               Delivery options and charges are calculated from the actual basket and destination,
               with fulfilment and tracking updates kept against the Shopify order.
             </p>
-            <Link to="/cart" className="mt-7 inline-flex h-12 items-center gap-2 bg-accent px-5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-white hover:brightness-110">
+            <Link to="/cart" className="mt-5 inline-flex h-11 items-center gap-2 bg-accent px-5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-white hover:brightness-110">
               Review basket <ArrowRight aria-hidden="true" className="h-4 w-4" />
             </Link>
           </div>

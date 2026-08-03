@@ -21,7 +21,6 @@ type CollectionPageProps = {
   collection: ShopifyCollection | null;
   fallbackProducts?: ShopifyProduct[];
   expectedHandle: string;
-  rangeTitle?: string;
   productLines?: ProductLineFilter[];
   activeLine?: string;
 };
@@ -35,7 +34,6 @@ export function CollectionPage({
   collection,
   fallbackProducts = [],
   expectedHandle,
-  rangeTitle,
   productLines = [],
   activeLine,
 }: CollectionPageProps) {
@@ -68,15 +66,7 @@ export function CollectionPage({
       </section>
 
       <section className="border-b border-rule bg-surface">
-        <div className="mx-auto flex max-w-[1600px] flex-col gap-3 md:gap-4 px-4 md:px-6 py-5 md:py-7 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
-              Product Range
-            </div>
-            <h2 className="mt-1 md:mt-2 font-display text-xl md:text-2xl font-bold uppercase tracking-tight">
-              {rangeTitle ?? collection?.title ?? expectedHandle}
-            </h2>
-          </div>
+        <div className="mx-auto flex max-w-[1600px] justify-end px-4 py-4 md:px-6">
           <Link
             to="/"
             className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-ink-muted transition-colors hover:text-accent"

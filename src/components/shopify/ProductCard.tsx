@@ -55,7 +55,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="mt-auto flex items-end justify-between gap-3 md:gap-4 pt-4 md:pt-6">
           <div>
             <div className="font-mono text-[8px] md:text-[9px] uppercase tracking-[0.24em] text-ink-muted">
-              Trade Price
+              Price each
             </div>
             <div className="mt-1 font-display text-base md:text-lg font-bold text-ink">
               {formatProductPrice(product)}

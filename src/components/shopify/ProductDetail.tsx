@@ -69,9 +69,9 @@ export function ProductDetail({ product }: ProductDetailProps) {
           <Link
             to="/products"
             search={{ category: "all", availability: "all", sort: "newest" }}
-            className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-ink-muted transition-colors hover:text-accent"
+            className="inline-flex h-12 items-center gap-2.5 bg-accent px-5 font-display text-sm font-bold uppercase tracking-[0.06em] text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-accent/90 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
+            <ArrowLeft className="h-4 w-4" />
             Catalogue
           </Link>
         </div>
@@ -613,7 +613,7 @@ function ProductResources({ product }: { product: ShopifyProduct }) {
             id={`support-panel-${activeTab}`}
             role="tabpanel"
             aria-labelledby={`support-tab-${activeTab}`}
-            className="min-h-[260px] p-4 md:min-h-[340px] md:p-6 lg:p-8"
+            className="p-4 md:p-6 lg:p-8"
           >
             {activeTab === "video" ? (
               videoLinks.length ? (

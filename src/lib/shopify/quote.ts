@@ -3,6 +3,40 @@ import type { ShopifyCart, ShopifyImage, ShopifyMoney, ShopifyProduct, ShopifyVa
 export const SHOPIFY_QUOTE_STORAGE_KEY = "spares_automation_quote";
 export const SHOPIFY_QUOTE_UPDATED_EVENT = "shopify-quote-updated";
 
+export type QuoteContactDetails = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  company: string;
+  phone: string;
+};
+
+export const EMPTY_QUOTE_CONTACT_DETAILS: QuoteContactDetails = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  company: "",
+  phone: "",
+};
+
+export function quoteContactDetailsFromCustomer(customer: {
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  defaultAddress?: { company?: string | null; phone?: string | null } | null;
+  companyMetafield?: { value: string } | null;
+} | null): QuoteContactDetails {
+  if (!customer) return { ...EMPTY_QUOTE_CONTACT_DETAILS };
+  return {
+    firstName: customer.firstName ?? "",
+    lastName: customer.lastName ?? "",
+    email: customer.email ?? "",
+    company: customer.defaultAddress?.company ?? customer.companyMetafield?.value ?? "",
+    phone: customer.phone ?? customer.defaultAddress?.phone ?? "",
+  };
+}
+
 export type StoredQuoteItem = {
   variantId: string;
   productHandle: string;

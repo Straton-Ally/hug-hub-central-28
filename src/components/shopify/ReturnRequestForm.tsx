@@ -1,6 +1,7 @@
-import { CheckCircle2, Loader2, Minus, PackageCheck, Plus, RotateCcw } from "lucide-react";
+import { CheckCircle2, Loader2, PackageCheck, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
+import { SignInRequired } from "@/components/shopify/SignInRequired";
 import { submitReturnRequest } from "@/lib/api/cms.functions";
 import { getShopifyCustomer } from "@/lib/api/shopify.functions";
 
@@ -18,7 +19,7 @@ type ReturnReason =
 type ReturnItem = {
   key: string;
   title: string;
-  orderedQuantity?: number;
+  orderedQuantity: number;
   quantity: number;
   reason: ReturnReason;
   details: string;
@@ -34,20 +35,11 @@ const REASONS: { value: ReturnReason; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
-const emptyItem = (): ReturnItem => ({
-  key: crypto.randomUUID(),
-  title: "",
-  quantity: 1,
-  reason: "faulty",
-  details: "",
-  selected: true,
-});
-
 export function ReturnRequestForm() {
   const [customer, setCustomer] = useState<Customer>(null);
   const [accountLoading, setAccountLoading] = useState(true);
   const [orderNumber, setOrderNumber] = useState("");
-  const [items, setItems] = useState<ReturnItem[]>([emptyItem()]);
+  const [items, setItems] = useState<ReturnItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reference, setReference] = useState("");
@@ -102,9 +94,9 @@ export function ReturnRequestForm() {
   }
 
   function chooseOrder(value: string) {
-    if (value === "manual") {
+    if (!value) {
       setOrderNumber("");
-      setItems([emptyItem()]);
+      setItems([]);
       return;
     }
     const order = customer?.orders.find((candidate) => candidate.name === value);
@@ -123,12 +115,12 @@ export function ReturnRequestForm() {
     const form = new FormData(event.currentTarget);
     const selectedItems = items.filter((item) => item.selected);
 
-    if (selectedItems.length === 0) {
-      setError("Select at least one item to return.");
+    if (!selectedOrder) {
+      setError("Select the order you want to return items from.");
       return;
     }
-    if (selectedItems.some((item) => !item.title.trim())) {
-      setError("Enter the name or part number for every item.");
+    if (selectedItems.length === 0) {
+      setError("Select at least one item to return.");
       return;
     }
 
@@ -171,6 +163,26 @@ export function ReturnRequestForm() {
     }
   }
 
+  if (accountLoading) {
+    return (
+      <section id="return-request" className="flex items-center gap-2 border border-rule bg-surface px-4 py-12 font-mono text-[10px] uppercase tracking-[0.25em] text-ink-muted md:px-8 md:py-16">
+        <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> Checking your account
+      </section>
+    );
+  }
+
+  if (!customer) {
+    return (
+      <div id="return-request">
+        <SignInRequired
+          redirect="/returns-policy"
+          title="Sign in to start a return"
+          description="Returns are linked to your account and orders. Sign in to pick the order and items you want to return."
+        />
+      </div>
+    );
+  }
+
   if (reference) {
     return (
       <section id="return-request" className="border border-green-600/40 bg-green-50 p-6 md:p-9">
@@ -201,8 +213,8 @@ export function ReturnRequestForm() {
             Request a return
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70">
-            Select the exact products and quantities. You will receive an email reference
-            immediately, followed by return instructions from the team.
+            Choose one of your orders, select the exact products and quantities, and receive an
+            email reference immediately followed by return instructions from the team.
           </p>
         </div>
         <PackageCheck aria-hidden="true" className="mt-5 h-9 w-9 text-accent md:mt-0" />
@@ -211,21 +223,18 @@ export function ReturnRequestForm() {
       <form onSubmit={submit} className="grid gap-8 p-5 md:p-8">
         <fieldset className="grid gap-4">
           <legend className="font-display text-lg font-bold uppercase tracking-tight">
-            1. Find your order
+            1. Choose your order
           </legend>
-          {accountLoading ? (
-            <p className="flex items-center gap-2 text-sm text-ink-muted">
-              <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> Checking your order history
-            </p>
-          ) : customer?.orders.length ? (
+          {customer.orders.length ? (
             <label className="grid gap-2">
-              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Choose a recent order</span>
+              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Select an order *</span>
               <select
-                value={selectedOrder ? orderNumber : "manual"}
+                value={orderNumber}
                 onChange={(event) => chooseOrder(event.target.value)}
+                required
                 className="h-12 border border-rule bg-background px-4 text-sm text-ink outline-none focus:border-accent"
               >
-                <option value="manual">Enter another order number</option>
+                <option value="">Select an order to return</option>
                 {customer.orders.map((order) => (
                   <option key={order.id} value={order.name}>
                     {order.name} · {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(order.processedAt))}
@@ -234,36 +243,25 @@ export function ReturnRequestForm() {
               </select>
             </label>
           ) : (
-            <p className="text-sm leading-6 text-ink-muted">
-              Enter the order number from your confirmation email or invoice.
+            <p className="border border-rule bg-background p-4 text-sm leading-6 text-ink-muted">
+              There are no orders linked to your account yet, so there is nothing to return. Orders
+              placed with Spares Automation will appear here.
             </p>
           )}
-          {!selectedOrder ? (
-            <label className="grid gap-2">
-              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Order number *</span>
-              <input
-                value={orderNumber}
-                onChange={(event) => setOrderNumber(event.target.value)}
-                required
-                placeholder="For example, #1042"
-                className="h-12 border border-rule bg-background px-4 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-accent"
-              />
-            </label>
-          ) : null}
         </fieldset>
 
-        <fieldset className="grid gap-4 border-t border-rule pt-8">
-          <legend className="font-display text-lg font-bold uppercase tracking-tight">
-            2. Items and quantities
-          </legend>
-          {items.map((item, index) => (
-            <div
-              key={item.key}
-              className={`grid gap-4 border p-4 md:p-5 ${
-                item.selected ? "border-accent bg-accent/5" : "border-rule bg-background"
-              }`}
-            >
-              {selectedOrder ? (
+        {selectedOrder ? (
+          <fieldset className="grid gap-4 border-t border-rule pt-8">
+            <legend className="font-display text-lg font-bold uppercase tracking-tight">
+              2. Items and quantities
+            </legend>
+            {items.map((item) => (
+              <div
+                key={item.key}
+                className={`grid gap-4 border p-4 md:p-5 ${
+                  item.selected ? "border-accent bg-accent/5" : "border-rule bg-background"
+                }`}
+              >
                 <label className="flex cursor-pointer items-start gap-3">
                   <input
                     type="checkbox"
@@ -278,91 +276,56 @@ export function ReturnRequestForm() {
                     </span>
                   </span>
                 </label>
-              ) : (
-                <div className="flex items-center justify-between gap-3">
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-ink-muted">
-                    Item {index + 1}
-                  </span>
-                  {items.length > 1 ? (
-                    <button
-                      type="button"
-                      onClick={() => setItems((current) => current.filter((entry) => entry.key !== item.key))}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 hover:underline"
-                    >
-                      <Minus aria-hidden="true" className="h-3.5 w-3.5" /> Remove
-                    </button>
-                  ) : null}
-                </div>
-              )}
 
-              {item.selected ? (
-                <div className="grid gap-4 md:grid-cols-[1fr_140px]">
-                  {!selectedOrder ? (
-                    <label className="grid gap-2 md:col-span-2">
-                      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Product name or part number *</span>
+                {item.selected ? (
+                  <div className="grid gap-4 md:grid-cols-[1fr_140px]">
+                    <label className="grid gap-2">
+                      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Reason for return *</span>
+                      <select
+                        value={item.reason}
+                        onChange={(event) => updateItem(item.key, { reason: event.target.value as ReturnReason })}
+                        className="h-12 border border-rule bg-surface px-4 text-sm outline-none focus:border-accent"
+                      >
+                        {REASONS.map((reason) => (
+                          <option key={reason.value} value={reason.value}>{reason.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="grid gap-2">
+                      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Quantity *</span>
                       <input
-                        value={item.title}
-                        onChange={(event) => updateItem(item.key, { title: event.target.value })}
+                        type="number"
+                        min={1}
+                        max={item.orderedQuantity}
+                        value={item.quantity}
+                        onChange={(event) =>
+                          updateItem(item.key, {
+                            quantity: Math.max(
+                              1,
+                              Math.min(item.orderedQuantity, Number(event.target.value) || 1),
+                            ),
+                          })
+                        }
                         required
                         className="h-12 border border-rule bg-surface px-4 text-sm outline-none focus:border-accent"
                       />
                     </label>
-                  ) : null}
-                  <label className="grid gap-2">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Reason for return *</span>
-                    <select
-                      value={item.reason}
-                      onChange={(event) => updateItem(item.key, { reason: event.target.value as ReturnReason })}
-                      className="h-12 border border-rule bg-surface px-4 text-sm outline-none focus:border-accent"
-                    >
-                      {REASONS.map((reason) => (
-                        <option key={reason.value} value={reason.value}>{reason.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="grid gap-2">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Quantity *</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={item.orderedQuantity ?? 999}
-                      value={item.quantity}
-                      onChange={(event) =>
-                        updateItem(item.key, {
-                          quantity: Math.max(
-                            1,
-                            Math.min(item.orderedQuantity ?? 999, Number(event.target.value) || 1),
-                          ),
-                        })
-                      }
-                      required
-                      className="h-12 border border-rule bg-surface px-4 text-sm outline-none focus:border-accent"
-                    />
-                  </label>
-                  <label className="grid gap-2 md:col-span-2">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">What happened? (optional)</span>
-                    <textarea
-                      rows={2}
-                      value={item.details}
-                      onChange={(event) => updateItem(item.key, { details: event.target.value })}
-                      placeholder="Add fault symptoms, damage details, or anything that will help us assess the return."
-                      className="resize-y border border-rule bg-surface px-4 py-3 text-sm outline-none placeholder:text-ink-muted focus:border-accent"
-                    />
-                  </label>
-                </div>
-              ) : null}
-            </div>
-          ))}
-          {!selectedOrder ? (
-            <button
-              type="button"
-              onClick={() => setItems((current) => [...current, emptyItem()])}
-              className="inline-flex h-11 w-fit items-center gap-2 border border-rule px-4 font-mono text-[10px] font-bold uppercase tracking-[0.16em] hover:border-accent hover:text-accent"
-            >
-              <Plus aria-hidden="true" className="h-4 w-4" /> Add another item
-            </button>
-          ) : null}
-        </fieldset>
+                    <label className="grid gap-2 md:col-span-2">
+                      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">What happened? (optional)</span>
+                      <textarea
+                        rows={2}
+                        value={item.details}
+                        onChange={(event) => updateItem(item.key, { details: event.target.value })}
+                        placeholder="Add fault symptoms, damage details, or anything that will help us assess the return."
+                        className="resize-y border border-rule bg-surface px-4 py-3 text-sm outline-none placeholder:text-ink-muted focus:border-accent"
+                      />
+                    </label>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </fieldset>
+        ) : null}
 
         <fieldset className="grid gap-4 border-t border-rule pt-8 md:grid-cols-2">
           <legend className="font-display text-lg font-bold uppercase tracking-tight">
@@ -370,15 +333,15 @@ export function ReturnRequestForm() {
           </legend>
           <label className="grid gap-2">
             <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Contact name *</span>
-            <input name="contactName" required defaultValue={customer?.displayName ?? ""} className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent" />
+            <input name="contactName" required defaultValue={customer.displayName ?? ""} className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent" />
           </label>
           <label className="grid gap-2">
             <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Email address *</span>
-            <input name="email" type="email" required defaultValue={customer?.email ?? ""} className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent" />
+            <input name="email" type="email" required defaultValue={customer.email ?? ""} className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent" />
           </label>
           <label className="grid gap-2">
             <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Phone number</span>
-            <input name="phone" type="tel" defaultValue={customer?.phone ?? ""} className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent" />
+            <input name="phone" type="tel" defaultValue={customer.phone ?? ""} className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent" />
           </label>
           <label className="grid gap-2">
             <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Company</span>

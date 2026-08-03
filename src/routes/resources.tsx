@@ -49,14 +49,14 @@ function ResourcesPage() {
 
       <main id="main-content">
         <section className="border-b border-rule bg-charcoal-deep text-white">
-          <div className="mx-auto max-w-[1400px] px-4 py-10 md:px-6 md:py-12">
+          <div className="mx-auto max-w-[1400px] px-4 py-8 md:px-6 md:py-10">
             <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-white/45 md:text-[10px]">
               Resource Library
             </div>
             <h1 className="mt-3 max-w-4xl font-display text-2xl font-extrabold uppercase leading-tight tracking-tight md:text-4xl">
               PDFs, manuals &amp; videos
             </h1>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-white/65 md:text-base">
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-white/65 md:text-base">
               Find product support files arranged by category, including burner PDFs and videos,
               installation guides, datasheets, and equipment manuals.
             </p>

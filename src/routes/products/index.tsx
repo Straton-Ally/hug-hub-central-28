@@ -6,7 +6,7 @@ import automation from "@/assets/Automation pic.jpg";
 import { ProductCard } from "@/components/shopify/ProductCard";
 import { SiteFooter } from "@/components/shopify/SiteFooter";
 import { SiteHeader } from "@/components/shopify/SiteHeader";
-import { getPaginatedProducts } from "@/lib/api/shopify.functions";
+import { getCollection, getPaginatedProducts } from "@/lib/api/shopify.functions";
 import type { ShopifyProduct } from "@/lib/shopify/types";
 import { SITE } from "@/lib/site";
 
@@ -66,9 +66,29 @@ export const Route = createFileRoute("/products/")({
     ],
     links: [{ rel: "canonical", href: `${SITE.url}/products` }],
   }),
-  loader: async () => ({
-    initialPage: await getPaginatedProducts({ data: { first: 48 } }),
-  }),
+  loader: async () => {
+    const [initialPage, collections] = await Promise.all([
+      getPaginatedProducts({ data: { first: 48 } }),
+      Promise.all(
+        categoryFilters.map(async (category) => {
+          try {
+            const collection = await getCollection({
+              data: { handle: category.handle, first: 1 },
+            });
+
+            return [category.handle, collection?.description.trim() || category.description] as const;
+          } catch {
+            return [category.handle, category.description] as const;
+          }
+        }),
+      ),
+    ]);
+
+    return {
+      initialPage,
+      categoryDescriptions: Object.fromEntries(collections),
+    };
+  },
   component: ProductsCataloguePage,
 });
 
@@ -80,7 +100,7 @@ function productMatchesCategory(product: ShopifyProduct, handle: string) {
 }
 
 function ProductsCataloguePage() {
-  const { initialPage } = Route.useLoaderData();
+  const { initialPage, categoryDescriptions } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const [products, setProducts] = useState<ShopifyProduct[]>(initialPage.products);
@@ -189,7 +209,7 @@ function ProductsCataloguePage() {
                     {category.label}
                   </span>
                   <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-                    {category.description}
+                    {categoryDescriptions[category.handle] ?? category.description}
                   </span>
                 </span>
                 <ChevronRight className="h-4 w-4 text-accent" />
@@ -321,8 +341,7 @@ function ProductsCataloguePage() {
             </div>
             <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <p className="max-w-2xl text-sm leading-relaxed text-white/50">
-                Cannot identify the right part? Send a part number, manufacturer reference, or
-                equipment photo to the procurement desk.
+                Trouble finding the right part? Send a part number, manufacturer reference, or photo.
               </p>
               <Link
                 to="/contact-us"

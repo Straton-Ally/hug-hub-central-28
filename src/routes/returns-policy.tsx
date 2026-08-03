@@ -49,18 +49,18 @@ function ReturnsPage() {
       <SiteHeader />
       <main id="main-content">
         <section className="border-b border-rule bg-ink text-white">
-          <div className="mx-auto max-w-[1200px] px-4 py-12 md:px-6 md:py-16">
+          <div className="mx-auto max-w-[1200px] px-4 py-8 md:px-6 md:py-10">
             <p className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-accent">
               Delivery & returns
             </p>
-            <h1 className="mt-4 max-w-4xl font-display text-4xl font-extrabold uppercase leading-[0.95] tracking-tight md:text-6xl">
-              A clear return from request to resolution
+            <h1 className="mt-3 max-w-4xl font-display text-3xl font-extrabold uppercase leading-[0.95] tracking-tight md:text-4xl">
+              Returns made simple
             </h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-white/70">
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-white/70">
               Request a return online, specify exactly what is coming back, and receive a
               traceable reference and email updates at each staff-managed stage.
             </p>
-            <div className="mt-7 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap gap-3">
               <a href="#return-request" className="inline-flex h-12 items-center gap-2 bg-accent px-5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-white hover:brightness-110">
                 Start a return <ArrowRight aria-hidden="true" className="h-4 w-4" />
               </a>

@@ -23,16 +23,7 @@ function ContactUsPage() {
       title="Contact Spares Automation"
       intro="Speak with the sales desk about part identification, product availability, quotations, orders, or account support. Choose the contact method that suits your request."
       compactHero
-      sections={[
-        {
-          title: "Product identification",
-          copy: "Send the manufacturer, part number, equipment model, and clear product photos where available so the team can identify the correct item.",
-        },
-        {
-          title: "Quotes and orders",
-          copy: "Include quantities, delivery location, required date, and any account or order reference so pricing and availability can be checked efficiently.",
-        },
-      ]}
+      sections={[]}
       ctaLabel="View common questions"
       ctaTo="/got-a-question"
     >

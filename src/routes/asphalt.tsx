@@ -54,7 +54,6 @@ function AsphaltPage() {
       collection={collection}
       fallbackProducts={products}
       expectedHandle={collectionHandle}
-      rangeTitle="Asphalt / Blacktop"
       productLines={productLines}
       activeLine={line}
     />

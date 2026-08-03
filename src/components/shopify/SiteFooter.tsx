@@ -38,9 +38,6 @@ export function SiteFooter() {
               SPARES<span className="text-accent">.</span>AUTOMATION
             </div>
           </Link>
-          <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/70">
-            Trade catalogue, quote support, and parts help for machinery teams.
-          </p>
           <Link
             to="/products"
             search={{ category: "all", availability: "all", sort: "newest" }}

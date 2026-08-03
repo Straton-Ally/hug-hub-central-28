@@ -17,7 +17,8 @@ function AboutUsPage() {
   return (
     <InfoPage
       eyebrow="About us"
-      title="Industrial parts and automation support"
+      title="About Spares Automation"
+      compactHero
       intro="Spares Automation supports plant operators, maintenance teams, and machinery businesses with product identification, sourcing, ordering, and technical sales assistance."
       sections={[
         {

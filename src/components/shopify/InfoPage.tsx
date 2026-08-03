@@ -29,7 +29,7 @@ export function InfoPage({
   ctaLabel = "Contact sales",
   ctaTo = "/contact-us",
   showHero = true,
-  compactHero = false,
+  compactHero = true,
   children,
 }: InfoPageProps) {
   return (

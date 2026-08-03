@@ -11,7 +11,12 @@ import {
   updateShopifyCartLine,
 } from "@/lib/api/shopify.functions";
 import { clearStoredCartId, getStoredCartId, setStoredCartId } from "@/lib/shopify/cart";
-import { formatMoney } from "@/lib/shopify/format";
+import {
+  addVat,
+  calculateVat,
+  formatMoney,
+  STANDARD_VAT_RATE,
+} from "@/lib/shopify/format";
 import type { ShopifyCart } from "@/lib/shopify/types";
 
 export const Route = createFileRoute("/cart")({
@@ -79,6 +84,8 @@ function CartPage() {
   }
 
   const isEmpty = !cart || cart.lines.length === 0;
+  const vatAmount = cart ? calculateVat(cart.cost.subtotalAmount) : null;
+  const totalIncludingVat = cart ? addVat(cart.cost.subtotalAmount) : null;
 
   return (
     <div className="min-h-screen bg-background text-ink">
@@ -210,17 +217,32 @@ function CartPage() {
                   <span>{cart.totalQuantity}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-ink-muted">Subtotal</span>
+                  <span className="text-ink-muted">Subtotal (excl. VAT)</span>
                   <span>{formatMoney(cart.cost.subtotalAmount)}</span>
                 </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-ink-muted">
+                    VAT ({Math.round(STANDARD_VAT_RATE * 100)}%)
+                  </span>
+                  <span>{vatAmount ? formatMoney(vatAmount) : "—"}</span>
+                </div>
+                <div className="flex items-start justify-between gap-4 text-sm">
+                  <span className="text-ink-muted">Delivery charge</span>
+                  <span className="text-right font-medium">Calculated at checkout</span>
+                </div>
               </div>
-              <div className="mt-6 flex items-center justify-between">
-                <span className="font-display text-lg font-bold uppercase tracking-tight">
-                  Total
-                </span>
-                <span className="font-display text-xl md:text-2xl font-bold">
-                  {formatMoney(cart.cost.totalAmount)}
-                </span>
+              <div className="mt-6">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="font-display text-lg font-bold uppercase tracking-tight">
+                    Total incl. VAT
+                  </span>
+                  <span className="font-display text-xl font-bold md:text-2xl">
+                    {totalIncludingVat ? formatMoney(totalIncludingVat) : "—"}
+                  </span>
+                </div>
+                <p className="mt-2 text-right text-xs text-ink-muted">
+                  Delivery is added at checkout after you enter the delivery address.
+                </p>
               </div>
               <a
                 href={cart.checkoutUrl}
