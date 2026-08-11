@@ -18,6 +18,7 @@ type InfoPageProps = {
   ctaTo?: string;
   showHero?: boolean;
   compactHero?: boolean;
+  showCta?: boolean;
   children?: ReactNode;
 };
 
@@ -30,6 +31,7 @@ export function InfoPage({
   ctaTo = "/contact-us",
   showHero = true,
   compactHero = true,
+  showCta = true,
   children,
 }: InfoPageProps) {
   return (
@@ -97,13 +99,15 @@ export function InfoPage({
                 {SITE.email}
               </a>
             </div>
-            <Link
-              to={ctaTo}
-              className="inline-flex h-11 items-center justify-center gap-2 bg-accent px-5 font-mono text-[10px] uppercase tracking-[0.22em] text-accent-foreground transition-colors hover:bg-accent/90"
-            >
-              {ctaLabel}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            {showCta ? (
+              <Link
+                to={ctaTo}
+                className="inline-flex h-11 items-center justify-center gap-2 bg-accent px-5 font-mono text-[10px] uppercase tracking-[0.22em] text-accent-foreground transition-colors hover:bg-accent/90"
+              >
+                {ctaLabel}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            ) : null}
           </div>
         </section>
       </main>

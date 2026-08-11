@@ -3,7 +3,6 @@ import { ExternalLink, FileText, PlayCircle } from "lucide-react";
 
 import { SiteFooter } from "@/components/shopify/SiteFooter";
 import { SiteHeader } from "@/components/shopify/SiteHeader";
-import { SupportRequestForm } from "@/components/shopify/SupportRequestForm";
 import { getResourceProducts } from "@/lib/api/shopify.functions";
 import { pageHead } from "@/lib/seo";
 import type { ShopifyProduct } from "@/lib/shopify/types";
@@ -35,7 +34,14 @@ export const Route = createFileRoute("/resources")({
       "Browse product videos, technical PDFs, datasheets, and manuals arranged by equipment category.",
       "/resources",
     ),
-  loader: async () => ({ products: await getResourceProducts({ data: { first: 100 } }) }),
+  loader: async () => {
+    try {
+      return { products: await getResourceProducts({ data: { first: 100 } }) };
+    } catch (error) {
+      console.error("[resources] Could not load product resources:", error);
+      return { products: [] };
+    }
+  },
   component: ResourcesPage,
 });
 
@@ -164,14 +170,12 @@ function ResourcesPage() {
                 Resource library is being updated
               </h2>
               <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-ink-muted">
-                No public files are currently assigned to products. Request the correct PDF,
-                manual, or video using the form below.
+                No public files are currently assigned to products. Contact the sales desk if you
+                need a specific PDF, manual, or video.
               </p>
             </div>
           </section>
         )}
-
-        <SupportRequestForm kind="resources" />
       </main>
 
       <SiteFooter />
