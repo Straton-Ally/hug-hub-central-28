@@ -11,7 +11,7 @@ const informationLinks = [
   { label: "Build a Quote", to: "/quote" },
   { label: "Track order", to: "/track-order" },
   { label: "My order history", to: "/account" },
-  { label: "Got a question", to: "/got-a-question" },
+  { label: "Got a question", to: "/contact-us" },
 ];
 
 const helpLinks = [

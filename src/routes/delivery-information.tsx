@@ -65,9 +65,6 @@ function DeliveryPage() {
               Delivery options and charges are calculated from the actual basket and destination,
               with fulfilment and tracking updates kept against the Shopify order.
             </p>
-            <Link to="/cart" className="mt-5 inline-flex h-11 items-center gap-2 bg-accent px-5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-white hover:brightness-110">
-              Review basket <ArrowRight aria-hidden="true" className="h-4 w-4" />
-            </Link>
           </div>
         </section>
 
