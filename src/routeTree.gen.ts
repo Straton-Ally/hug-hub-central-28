@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
-import { Route as TradeAccountRouteImport } from './routes/trade-account'
 import { Route as TrackOrderRouteImport } from './routes/track-order'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as SearchRouteImport } from './routes/search'
@@ -47,11 +46,6 @@ import { Route as AdminSubmissionsIdRouteImport } from './routes/admin/submissio
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
   id: '/unsubscribe',
   path: '/unsubscribe',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TradeAccountRoute = TradeAccountRouteImport.update({
-  id: '/trade-account',
-  path: '/trade-account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TrackOrderRoute = TrackOrderRouteImport.update({
@@ -243,7 +237,6 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/track-order': typeof TrackOrderRoute
-  '/trade-account': typeof TradeAccountRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/admin/login': typeof AdminLoginRoute
   '/products/$handle': typeof ProductsHandleRoute
@@ -279,7 +272,6 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/track-order': typeof TrackOrderRoute
-  '/trade-account': typeof TradeAccountRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/admin/login': typeof AdminLoginRoute
   '/products/$handle': typeof ProductsHandleRoute
@@ -316,7 +308,6 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/track-order': typeof TrackOrderRoute
-  '/trade-account': typeof TradeAccountRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/admin/login': typeof AdminLoginRoute
   '/products/$handle': typeof ProductsHandleRoute
@@ -354,7 +345,6 @@ export interface FileRouteTypes {
     | '/search'
     | '/terms-and-conditions'
     | '/track-order'
-    | '/trade-account'
     | '/unsubscribe'
     | '/admin/login'
     | '/products/$handle'
@@ -390,7 +380,6 @@ export interface FileRouteTypes {
     | '/search'
     | '/terms-and-conditions'
     | '/track-order'
-    | '/trade-account'
     | '/unsubscribe'
     | '/admin/login'
     | '/products/$handle'
@@ -426,7 +415,6 @@ export interface FileRouteTypes {
     | '/search'
     | '/terms-and-conditions'
     | '/track-order'
-    | '/trade-account'
     | '/unsubscribe'
     | '/admin/login'
     | '/products/$handle'
@@ -463,7 +451,6 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   TrackOrderRoute: typeof TrackOrderRoute
-  TradeAccountRoute: typeof TradeAccountRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   AdminLoginRoute: typeof AdminLoginRoute
   ProductsHandleRoute: typeof ProductsHandleRoute
@@ -479,13 +466,6 @@ declare module '@tanstack/react-router' {
       path: '/unsubscribe'
       fullPath: '/unsubscribe'
       preLoaderRoute: typeof UnsubscribeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/trade-account': {
-      id: '/trade-account'
-      path: '/trade-account'
-      fullPath: '/trade-account'
-      preLoaderRoute: typeof TradeAccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/track-order': {
@@ -743,7 +723,6 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   TermsAndConditionsRoute: TermsAndConditionsRoute,
   TrackOrderRoute: TrackOrderRoute,
-  TradeAccountRoute: TradeAccountRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   AdminLoginRoute: AdminLoginRoute,
   ProductsHandleRoute: ProductsHandleRoute,

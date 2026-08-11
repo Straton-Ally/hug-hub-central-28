@@ -7,10 +7,10 @@ import { SITE } from "@/lib/site";
 
 const collectionHandle = "asphalt";
 const productLines = [
-  { slug: "feeders", label: "Feeders", keywords: ["feeder", "feed", "conveyor", "belt", "scraper"] },
+  { slug: "feeders", label: "Aggregate Feeding", keywords: ["aggregate", "feeder", "feed", "conveyor", "belt", "scraper"] },
   { slug: "burner-drying", label: "Burner / Drying", keywords: ["burner", "dryer", "drying", "nozzle", "flame"] },
   { slug: "bitumen", label: "Bitumen", keywords: ["bitumen", "pump", "valve", "hose"] },
-  { slug: "hot-stone-silos", label: "Hot Stone / Silos", keywords: ["hot", "stone", "silo", "storage", "bin"] },
+  { slug: "hot-stone-silos", label: "Hot Storage / Silos", keywords: ["hot", "stone", "silo", "storage", "bin"] },
   { slug: "baghouse", label: "Baghouse", keywords: ["baghouse", "filter", "bag", "dust"] },
   { slug: "mixing-tower", label: "Mixing Tower", keywords: ["mixing", "mixer", "tower", "liner", "drum"] },
 ];
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/asphalt")({
   }),
   head: () => ({
     meta: [
-      { title: "Asphalt Spares | Spares Automation" },
+      { title: "Asphalt / Blacktop Spares | Spares Automation" },
       {
         name: "description",
         content: "Product range for asphalt and blacktop plant spares.",

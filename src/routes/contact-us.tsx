@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Mail, MapPin, MessageCircle, Phone } from "lucide-react";
+import { Mail, MessageCircle, type LucideIcon } from "lucide-react";
 
 import { InfoPage } from "@/components/shopify/InfoPage";
 import { SupportRequestForm } from "@/components/shopify/SupportRequestForm";
@@ -22,25 +22,15 @@ function ContactUsPage() {
       eyebrow="Support"
       title="Contact Spares Automation"
       intro="Speak with the sales desk about part identification, product availability, quotations, orders, or account support. Choose the contact method that suits your request."
-      sections={[
-        {
-          title: "Product identification",
-          copy: "Send the manufacturer, part number, equipment model, and clear product photos where available so the team can identify the correct item.",
-        },
-        {
-          title: "Quotes and orders",
-          copy: "Include quantities, delivery location, required date, and any account or order reference so pricing and availability can be checked efficiently.",
-        },
-      ]}
+      compactHero
+      sections={[]}
       ctaLabel="View common questions"
       ctaTo="/got-a-question"
     >
       <section className="border-t border-rule bg-background py-10">
-        <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-4 px-4 sm:grid-cols-2 md:px-6 lg:grid-cols-4">
-          <ContactCard icon={Phone} title="Technical Sales" copy={SITE.phoneDisplay} detail={SITE.hours} href={`tel:${SITE.phoneHref}`} />
+        <div className="mx-auto grid max-w-[900px] grid-cols-1 gap-4 px-4 sm:grid-cols-2 md:px-6">
           <ContactCard icon={Mail} title="Email Enquiries" copy={SITE.email} detail="Send product questions or cart details" href={`mailto:${SITE.email}`} />
           <ContactCard icon={MessageCircle} title="WhatsApp" copy={SITE.phoneDisplay} detail="Useful for photos and part numbers" href={whatsappHref("Hello Spares Automation, I need help identifying a part.")} external />
-          <ContactCard icon={MapPin} title="UK Support" copy={SITE.location} detail="Industrial parts and automation support" />
         </div>
       </section>
       <SupportRequestForm kind="question" />
@@ -56,7 +46,7 @@ function ContactCard({
   href,
   external = false,
 }: {
-  icon: typeof Phone;
+  icon: LucideIcon;
   title: string;
   copy: string;
   detail: string;

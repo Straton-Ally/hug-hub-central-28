@@ -1,7 +1,7 @@
 import { shopifyAdmin } from "./admin.server";
 
 /**
- * Sync an approved trade/credit application to Shopify as a tagged customer.
+ * Sync an approved credit application to Shopify as a tagged customer.
  *
  * Golden rule: the CMS never creates orders. This only creates (or represents)
  * the customer record in Shopify so staff can raise draft orders / invoices
@@ -138,20 +138,6 @@ export type AccountCustomerSyncInput = Omit<
   extraTags?: string[];
   metafields?: CustomerSyncMetafield[];
 };
-
-export async function syncTradeCustomer(
-  input: AccountCustomerSyncInput,
-): Promise<CustomerSyncResult> {
-  return syncCustomerToShopify({
-    ...input,
-    tags: ["trade-account", ...(input.extraTags ?? [])],
-    metafields: [
-      { key: "account_type", value: "trade" },
-      { key: "pricing_tier", value: "quote-based" },
-      ...(input.metafields ?? []),
-    ],
-  });
-}
 
 export async function syncCreditCustomer(
   input: AccountCustomerSyncInput,

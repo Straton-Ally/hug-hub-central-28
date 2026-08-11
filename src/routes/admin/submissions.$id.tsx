@@ -17,8 +17,8 @@ import {
 
 const TYPE_LABELS: Record<string, string> = {
   part_inquiry: "Part inquiry",
-  trade_account: "Trade account",
   credit_account: "Credit account",
+  return_request: "Return request",
   support_tracking: "Order tracking",
   support_resources: "Resource request",
   support_question: "Product question",
@@ -154,6 +154,15 @@ function SubmissionDetailPage() {
   async function viewAttachment(id: number) {
     const result = await getAttachmentDownload({ data: { id } });
     if (result.ok) {
+      if (!result.mime.startsWith("image/")) {
+        const link = document.createElement("a");
+        link.href = result.dataUrl;
+        link.download = result.filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        return;
+      }
       const win = window.open();
       if (win) {
         win.document.title = result.filename;
@@ -232,7 +241,7 @@ function SubmissionDetailPage() {
                       onClick={() => void viewAttachment(attachment.id)}
                       className="inline-flex h-9 shrink-0 items-center border border-rule px-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink hover:border-accent hover:text-accent"
                     >
-                      View
+                      {attachment.mime.startsWith("image/") ? "View" : "Download"}
                     </button>
                   </li>
                 ))}
@@ -315,7 +324,7 @@ function SubmissionDetailPage() {
             </div>
           </section>
 
-          {(submission.type === "trade_account" || submission.type === "credit_account") && (
+          {submission.type === "credit_account" && (
             <section className="border border-rule bg-surface p-5">
               <h2 className="font-display text-sm font-bold uppercase tracking-tight">Shopify sync</h2>
               {submission.shopifySyncedAt ? (

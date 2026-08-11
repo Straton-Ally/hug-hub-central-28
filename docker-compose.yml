@@ -23,6 +23,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    # Coolify reaches the app through its internal proxy network. Local host
+    # port publishing lives in docker-compose.override.yml so production does
+    # not compete for a fixed port on the deployment server.
     expose:
       - "80"
     environment:

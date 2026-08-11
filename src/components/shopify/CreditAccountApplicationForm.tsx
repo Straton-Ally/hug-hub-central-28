@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import { CheckCircle2, Send } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
@@ -117,9 +116,6 @@ export function CreditAccountApplicationForm() {
               <button type="submit" disabled={busy || !hydrated} className="inline-flex h-12 items-center justify-center gap-2 bg-accent px-6 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
                 <Send aria-hidden="true" className="h-4 w-4" /> {busy ? "Submitting" : "Submit application"}
               </button>
-              <Link to="/trade-account" className="inline-flex h-12 items-center justify-center border border-white/20 px-6 font-mono text-[10px] uppercase tracking-[0.18em] text-white hover:border-accent hover:text-accent">
-                Apply for a trade account instead
-              </Link>
             </div>
           </form>
         )}

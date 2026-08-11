@@ -1,6 +1,7 @@
 @import "tailwindcss" source(none);
 @source "../src/routes";
 @source "../src/components/shopify";
+@source "../src/components/ui/dialog.tsx";
 @source "../src/lib";
 @import "tw-animate-css";
 
@@ -27,8 +28,9 @@
   --foreground: oklch(0.18 0.012 250);
   --surface: oklch(1 0 0);
   --ink: oklch(0.22 0.012 250);
-  --ink-muted: oklch(0.55 0.01 250);
-  --rule: oklch(0.9 0.005 250);
+  /* Secondary copy is intentionally dark enough for small labels and controls. */
+  --ink-muted: oklch(0.3 0.012 250);
+  --rule: oklch(0.78 0.007 250);
   --charcoal: oklch(0.245 0.012 250);     /* #1E2229 ish */
   --charcoal-deep: oklch(0.18 0.012 250);
   --accent: oklch(0.52 0.18 245);          /* accessible automation blue */
@@ -40,6 +42,7 @@
   * { border-color: var(--color-rule); }
   html { overflow-x: clip; scroll-behavior: smooth; }
   body { min-width: 0; overflow-x: clip; background: var(--color-background); color: var(--color-foreground); font-family: var(--font-display); -webkit-font-smoothing: antialiased; }
+  .font-mono { font-weight: 500; }
   :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
   :target, :focus { scroll-margin-top: 10rem; }
   button, [role="button"], select { min-height: 24px; }
@@ -74,6 +77,41 @@
       opacity: 0;
       transform: translateY(1rem);
     }
+  }
+}
+
+/*
+ * Keep secondary text readable on dark surfaces. These utilities previously
+ * allowed very low white opacities that were difficult to read, especially in
+ * the small mono labels used throughout the catalogue and forms.
+ */
+@layer utilities {
+  .font-mono.text-\[8px\] { font-size: 0.5625rem; }
+  .font-mono.text-\[9px\],
+  .font-mono.text-\[10px\] { font-size: 0.6875rem; }
+
+  .text-white\/30 { color: rgb(255 255 255 / 0.75); }
+  .text-white\/40 { color: rgb(255 255 255 / 0.8); }
+  .text-white\/45,
+  .text-white\/50 { color: rgb(255 255 255 / 0.85); }
+  .text-white\/55,
+  .text-white\/60 { color: rgb(255 255 255 / 0.88); }
+  .text-white\/65,
+  .text-white\/70 { color: rgb(255 255 255 / 0.9); }
+  .text-white\/75 { color: rgb(255 255 255 / 0.92); }
+  .text-white\/80 { color: rgb(255 255 255 / 0.94); }
+  .text-white\/85 { color: rgb(255 255 255 / 0.96); }
+
+  .placeholder\:text-white\/30::placeholder {
+    color: rgb(255 255 255 / 0.7);
+  }
+
+  .placeholder\:text-white\/40::placeholder {
+    color: rgb(255 255 255 / 0.75);
+  }
+
+  .placeholder\:text-white\/70::placeholder {
+    color: rgb(255 255 255 / 0.85);
   }
 }
 

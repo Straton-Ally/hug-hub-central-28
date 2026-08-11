@@ -118,6 +118,18 @@ export const submitShopifyQuote = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }) => {
+    let authenticatedCustomerId: string | undefined;
+    try {
+      const sessionData = await getCustomerAccessTokenSession();
+      if (sessionData?.customerAccessToken) {
+        const authenticatedCustomer = await getCustomer(sessionData.customerAccessToken);
+        authenticatedCustomerId = authenticatedCustomer?.id;
+      }
+    } catch {
+      // Quote submission can still proceed using the supplied email if the
+      // authenticated Shopify customer lookup is temporarily unavailable.
+    }
+
     const note = [
       "Website quote request",
       `Customer: ${data.firstName} ${data.lastName}`,
@@ -152,6 +164,7 @@ export const submitShopifyQuote = createServerFn({ method: "POST" })
       `,
       {
         input: {
+          ...(authenticatedCustomerId ? { customerId: authenticatedCustomerId } : {}),
           email: data.email,
           note,
           tags: ["Website quote request", "Awaiting sales review"],

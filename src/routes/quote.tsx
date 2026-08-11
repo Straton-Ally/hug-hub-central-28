@@ -9,8 +9,11 @@ import { pageHead } from "@/lib/seo";
 import { formatMoney } from "@/lib/shopify/format";
 import {
   clearStoredQuote,
+  EMPTY_QUOTE_CONTACT_DETAILS,
   getStoredQuote,
+  quoteContactDetailsFromCustomer,
   setStoredQuote,
+  type QuoteContactDetails,
   type StoredQuoteItem,
 } from "@/lib/shopify/quote";
 
@@ -32,23 +35,33 @@ function QuotePage() {
   const [error, setError] = useState("");
   const [reference, setReference] = useState("");
   const [isCreditAccount, setIsCreditAccount] = useState(false);
+  const [signedInAccount, setSignedInAccount] = useState("");
+  const [contactDetails, setContactDetails] = useState<QuoteContactDetails>(() => ({
+    ...EMPTY_QUOTE_CONTACT_DETAILS,
+  }));
 
   useEffect(() => {
+    let active = true;
     setItems(getStoredQuote());
-    setLoaded(true);
-  }, []);
-
-  useEffect(() => {
     void getShopifyCustomer()
       .then((customer) => {
+        if (!active) return;
         const tags = customer?.tags ?? [];
         setIsCreditAccount(
           tags.some((tag) =>
             ["credit account", "credit-account"].includes(tag.toLowerCase()),
           ),
         );
+        setContactDetails(quoteContactDetailsFromCustomer(customer));
+        setSignedInAccount(customer?.email ?? customer?.displayName ?? "");
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const currencyCode = items[0]?.price.currencyCode ?? "GBP";
@@ -75,6 +88,10 @@ function QuotePage() {
 
   function removeItem(variantId: string) {
     saveItems(items.filter((item) => item.variantId !== variantId));
+  }
+
+  function updateContactDetail(field: keyof QuoteContactDetails, value: string) {
+    setContactDetails((current) => ({ ...current, [field]: value }));
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -130,7 +147,8 @@ function QuotePage() {
               My Quote
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
-              Review your products, add your contact details, and submit the quote for sales review.
+              Review your products and submit the quote for sales review. Shopify account details
+              are filled automatically when you are signed in.
             </p>
           </div>
           <Link
@@ -276,17 +294,39 @@ function QuotePage() {
                   : "Prices shown are indicative. Your final quotation will confirm price, VAT, availability, delivery, and payment terms."}
               </p>
 
+              <div className="mt-5 border border-rule bg-background p-3 text-xs leading-5 text-ink-muted">
+                {signedInAccount ? (
+                  <>
+                    Shopify account details loaded for{" "}
+                    <strong className="font-semibold text-ink">{signedInAccount}</strong>. You can
+                    update them below for this quote if needed.
+                  </>
+                ) : (
+                  <>
+                    Guest quote: enter your details below, or{" "}
+                    <Link
+                      to="/login"
+                      search={{ redirect: "/quote" }}
+                      className="font-semibold text-accent hover:underline"
+                    >
+                      sign in to prefill them from Shopify
+                    </Link>
+                    .
+                  </>
+                )}
+              </div>
+
               <fieldset className="mt-6 space-y-4">
                 <legend className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-ink-muted">
                   Your details
                 </legend>
                 <div className="grid grid-cols-2 gap-3">
-                  <QuoteField label="First name" name="firstName" autoComplete="given-name" required />
-                  <QuoteField label="Last name" name="lastName" autoComplete="family-name" required />
+                  <QuoteField label="First name" name="firstName" value={contactDetails.firstName} onChange={(value) => updateContactDetail("firstName", value)} autoComplete="given-name" required />
+                  <QuoteField label="Last name" name="lastName" value={contactDetails.lastName} onChange={(value) => updateContactDetail("lastName", value)} autoComplete="family-name" required />
                 </div>
-                <QuoteField label="Email address" name="email" type="email" autoComplete="email" required />
-                <QuoteField label="Company" name="company" autoComplete="organization" />
-                <QuoteField label="Phone" name="phone" type="tel" autoComplete="tel" />
+                <QuoteField label="Email address" name="email" value={contactDetails.email} onChange={(value) => updateContactDetail("email", value)} type="email" autoComplete="email" required />
+                <QuoteField label="Company" name="company" value={contactDetails.company} onChange={(value) => updateContactDetail("company", value)} autoComplete="organization" />
+                <QuoteField label="Phone" name="phone" value={contactDetails.phone} onChange={(value) => updateContactDetail("phone", value)} type="tel" autoComplete="tel" />
                 <label className="grid gap-2 text-xs font-semibold text-ink">
                   Additional information
                   <textarea
@@ -328,12 +368,16 @@ function QuotePage() {
 function QuoteField({
   label,
   name,
+  value,
+  onChange,
   type = "text",
   autoComplete,
   required,
 }: {
   label: string;
   name: string;
+  value: string;
+  onChange: (value: string) => void;
   type?: string;
   autoComplete?: string;
   required?: boolean;
@@ -343,6 +387,8 @@ function QuoteField({
       {label}
       <input
         name={name}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
         type={type}
         autoComplete={autoComplete}
         required={required}

@@ -50,7 +50,7 @@ export function getServerConfig() {
     salesDeskEmail:
       process.env.SALES_DESK_EMAIL ?? "trade@spares-automation.co.uk",
 
-    // Local persistent storage for part-inquiry photo uploads. Mount a volume
+    // Local persistent storage for CMS attachments. Mount a volume
     // here in production (see docker-compose.yml).
     uploadDir: process.env.UPLOAD_DIR ?? "./data/uploads",
   };

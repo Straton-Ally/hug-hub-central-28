@@ -40,7 +40,6 @@ export function CollectionPage({
   const products = collection?.products ?? fallbackProducts;
   const selectedLine = productLines.find((line) => line.slug === activeLine);
   const visibleProducts = selectedLine ? products.filter((product) => matchesLine(product, selectedLine)) : products;
-  const accentClass = accent === "amber" ? "text-amber" : "text-accent";
   const bgAccentClass = accent === "amber" ? "bg-amber" : "bg-accent";
 
   return (
@@ -61,22 +60,13 @@ export function CollectionPage({
             {eyebrow}
           </div>
           <h1 className="break-words font-display text-[clamp(1.45rem,5vw,2.5rem)] font-extrabold uppercase leading-none tracking-tight text-white">
-            {title}{" "}
-            <span className={accentClass}>{collection?.title ? "CATALOGUE" : "SPARES"}</span>
+            {title}
           </h1>
         </div>
       </section>
 
       <section className="border-b border-rule bg-surface">
-        <div className="mx-auto flex max-w-[1600px] flex-col gap-3 md:gap-4 px-4 md:px-6 py-5 md:py-7 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
-              Product Range
-            </div>
-            <h2 className="mt-1 md:mt-2 font-display text-xl md:text-2xl font-bold uppercase tracking-tight">
-              {collection?.title ?? expectedHandle}
-            </h2>
-          </div>
+        <div className="mx-auto flex max-w-[1600px] justify-end px-4 py-4 md:px-6">
           <Link
             to="/"
             className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-ink-muted transition-colors hover:text-accent"

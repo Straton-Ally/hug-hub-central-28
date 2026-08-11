@@ -5,11 +5,16 @@ import {
   ChevronRight,
   FileText,
   Mail,
+  Maximize2,
   MessageCircle,
   Minus,
   PackageCheck,
   PlayCircle,
   Plus,
+  RotateCcw,
+  ShieldCheck,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -18,7 +23,18 @@ import { AddToQuoteButton } from "@/components/shopify/AddToQuoteButton";
 import { PayPalMark } from "@/components/shopify/PaymentMarks";
 import { SiteFooter } from "@/components/shopify/SiteFooter";
 import { SiteHeader } from "@/components/shopify/SiteHeader";
-import { formatMoney, shopifyImageUrl } from "@/lib/shopify/format";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  addVat,
+  formatMoney,
+  shopifyImageUrl,
+  STANDARD_VAT_RATE,
+} from "@/lib/shopify/format";
 import type { ShopifyProduct, ShopifyVariant } from "@/lib/shopify/types";
 import { SITE } from "@/lib/site";
 import { productQuestionMailto, productQuestionWhatsApp } from "@/lib/quote";
@@ -53,9 +69,9 @@ export function ProductDetail({ product }: ProductDetailProps) {
           <Link
             to="/products"
             search={{ category: "all", availability: "all", sort: "newest" }}
-            className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-ink-muted transition-colors hover:text-accent"
+            className="inline-flex h-12 items-center gap-2.5 bg-accent px-5 font-display text-sm font-bold uppercase tracking-[0.06em] text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-accent/90 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
+            <ArrowLeft className="h-4 w-4" />
             Catalogue
           </Link>
         </div>
@@ -78,21 +94,40 @@ export function ProductDetail({ product }: ProductDetailProps) {
               {product.title}
             </h1>
 
-            <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <SpecBlock label="Brand" value={brand} />
               <SpecBlock label="MPN / Range" value={mpnRange} />
-              <SpecBlock label="Product line" value={product.productType || "Industrial part"} />
             </div>
 
-            <div className="mt-6 flex flex-wrap items-end gap-x-4 gap-y-2">
-              <div className="font-display text-2xl font-bold text-ink md:text-[1.75rem]">
-                {selectedVariant ? formatMoney(selectedVariant.price) : "Price on request"}
-              </div>
-              {selectedVariant?.compareAtPrice ? (
-                <div className="pb-1 font-mono text-sm uppercase tracking-[0.18em] text-ink-muted line-through">
-                  {formatMoney(selectedVariant.compareAtPrice)}
+            <div className="mt-6 grid max-w-2xl gap-px border border-rule bg-rule sm:grid-cols-2">
+              <div className="bg-surface p-4">
+                <div className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-ink-muted">
+                  Excl. VAT
                 </div>
-              ) : null}
+                <div className="mt-1 font-display text-2xl font-bold text-ink md:text-[1.75rem]">
+                  {selectedVariant ? formatMoney(selectedVariant.price) : "Price on request"}
+                </div>
+                {selectedVariant?.compareAtPrice ? (
+                  <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-muted line-through">
+                    Was {formatMoney(selectedVariant.compareAtPrice)}
+                  </div>
+                ) : null}
+              </div>
+              <div className="bg-background p-4 shadow-[inset_3px_0_0_var(--color-accent)]">
+                <div className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-ink-muted">
+                  Incl. VAT ({Math.round(STANDARD_VAT_RATE * 100)}%)
+                </div>
+                <div className="mt-1 font-display text-2xl font-bold text-accent md:text-[1.75rem]">
+                  {selectedVariant
+                    ? formatMoney(addVat(selectedVariant.price))
+                    : "Price on request"}
+                </div>
+                {selectedVariant?.compareAtPrice ? (
+                  <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-muted line-through">
+                    Was {formatMoney(addVat(selectedVariant.compareAtPrice))}
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             {product.variants.length > 1 ? (
@@ -138,7 +173,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                 />
                 <Link
                   to="/cart"
-                  className="inline-flex h-13 items-center justify-center border border-rule px-5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink transition-colors hover:border-accent hover:text-accent"
+                  className="inline-flex h-13 items-center justify-center border border-charcoal-deep bg-charcoal-deep px-5 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-white shadow-sm transition-colors hover:border-accent hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   View Cart
                 </Link>
@@ -156,11 +191,13 @@ export function ProductDetail({ product }: ProductDetailProps) {
               </div>
             </div>
 
-            <QuestionActions product={product} variant={selectedVariant} />
           </section>
 
           <div className="bg-surface lg:col-span-2">
             <ProductResources product={product} />
+          </div>
+          <div className="bg-surface lg:col-span-2">
+            <QuestionActions product={product} variant={selectedVariant} />
           </div>
         </section>
       </main>
@@ -235,6 +272,8 @@ function ProductGallery({
   activeImage: ShopifyProduct["images"][number] | undefined;
   onSelectImage: (image: ShopifyProduct["images"][number]) => void;
 }) {
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [zoom, setZoom] = useState(1);
   const activeIndex = activeImage
     ? gallery.findIndex((image) => image.url === activeImage.url)
     : 0;
@@ -243,21 +282,37 @@ function ProductGallery({
     const currentIndex = activeIndex >= 0 ? activeIndex : 0;
     const nextIndex = (currentIndex + offset + gallery.length) % gallery.length;
     onSelectImage(gallery[nextIndex]);
+    setZoom(1);
+  };
+  const setViewerState = (open: boolean) => {
+    setViewerOpen(open);
+    if (!open) setZoom(1);
   };
 
   return (
     <section className="bg-surface p-4 md:p-6 lg:p-8">
       <div className="relative aspect-[4/3] max-h-[620px] overflow-hidden bg-[oklch(0.96_0.005_250)]">
         {activeImage ? (
-          <img
-            src={shopifyImageUrl(activeImage.url, 1000)}
-            srcSet={`${shopifyImageUrl(activeImage.url, 480)} 480w, ${shopifyImageUrl(activeImage.url, 800)} 800w, ${shopifyImageUrl(activeImage.url, 1200)} 1200w`}
-            sizes="(min-width: 1024px) 48vw, 100vw"
-            width={activeImage.width ?? 1000}
-            height={activeImage.height ?? 1000}
-            alt={activeImage.altText ?? productTitle}
-            className="h-full w-full object-contain mix-blend-multiply"
-          />
+          <button
+            type="button"
+            onClick={() => setViewerState(true)}
+            className="group h-full w-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-accent"
+            aria-label={`Enlarge ${activeImage.altText ?? productTitle}`}
+          >
+            <img
+              src={shopifyImageUrl(activeImage.url, 1000)}
+              srcSet={`${shopifyImageUrl(activeImage.url, 480)} 480w, ${shopifyImageUrl(activeImage.url, 800)} 800w, ${shopifyImageUrl(activeImage.url, 1200)} 1200w`}
+              sizes="(min-width: 1024px) 48vw, 100vw"
+              width={activeImage.width ?? 1000}
+              height={activeImage.height ?? 1000}
+              alt={activeImage.altText ?? productTitle}
+              className="h-full w-full object-contain mix-blend-multiply transition-transform duration-300 group-hover:scale-[1.02]"
+            />
+            <span className="absolute bottom-3 right-3 inline-flex min-h-10 items-center gap-2 bg-charcoal-deep/90 px-3 font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-white shadow-md">
+              <Maximize2 className="h-4 w-4" aria-hidden="true" />
+              Click to enlarge
+            </span>
+          </button>
         ) : (
           <div className="flex h-full w-full items-center justify-center font-mono text-[10px] uppercase tracking-[0.25em] text-ink-muted">
             Image pending
@@ -312,6 +367,100 @@ function ProductGallery({
             </button>
           ))}
         </div>
+      ) : null}
+
+      {activeImage ? (
+        <Dialog open={viewerOpen} onOpenChange={setViewerState}>
+          <DialogContent className="flex h-[95dvh] w-[96vw] max-w-[1500px] flex-col gap-0 overflow-hidden border-rule bg-surface p-0 shadow-2xl sm:rounded-none">
+            <DialogTitle className="sr-only">{productTitle} image viewer</DialogTitle>
+            <DialogDescription className="sr-only">
+              Enlarged product image. Use the zoom controls or double-click the image to zoom.
+            </DialogDescription>
+
+            <div className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-rule bg-surface px-4 py-2 pr-14">
+              <div className="min-w-0">
+                <div className="truncate font-display text-sm font-bold text-ink">{productTitle}</div>
+                <div aria-live="polite" className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-ink-muted">
+                  Zoom {Math.round(zoom * 100)}%
+                </div>
+              </div>
+              <div className="flex items-center border border-rule bg-background">
+                <button
+                  type="button"
+                  onClick={() => setZoom((current) => Math.max(1, current - 0.5))}
+                  disabled={zoom <= 1}
+                  aria-label="Zoom out"
+                  className="flex h-10 w-10 items-center justify-center border-r border-rule text-ink hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <ZoomOut className="h-4 w-4" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoom(1)}
+                  disabled={zoom === 1}
+                  aria-label="Reset zoom"
+                  className="flex h-10 w-10 items-center justify-center border-r border-rule text-ink hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoom((current) => Math.min(3, current + 0.5))}
+                  disabled={zoom >= 3}
+                  aria-label="Zoom in"
+                  className="flex h-10 w-10 items-center justify-center text-ink hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <ZoomIn className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+
+            <div className="relative min-h-0 flex-1 overflow-auto bg-[oklch(0.96_0.005_250)]">
+              <div
+                className="relative min-h-full min-w-full"
+                style={{ width: `${zoom * 100}%`, height: `${zoom * 100}%` }}
+              >
+                <img
+                  src={shopifyImageUrl(activeImage.url, 2400)}
+                  width={activeImage.width ?? 1600}
+                  height={activeImage.height ?? 1600}
+                  alt={activeImage.altText ?? productTitle}
+                  onDoubleClick={() => setZoom((current) => (current === 1 ? 2 : 1))}
+                  className={`absolute inset-0 h-full w-full select-none object-contain mix-blend-multiply ${
+                    zoom === 1 ? "cursor-zoom-in" : "cursor-zoom-out"
+                  }`}
+                  draggable={false}
+                />
+              </div>
+
+              {showNavigation ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => selectRelativeImage(-1)}
+                    aria-label="View previous product image"
+                    className="fixed left-[3vw] top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-rule bg-white/95 text-ink shadow-md hover:border-accent hover:bg-accent hover:text-white md:h-12 md:w-12"
+                  >
+                    <ChevronLeft className="h-6 w-6" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => selectRelativeImage(1)}
+                    aria-label="View next product image"
+                    className="fixed right-[3vw] top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-rule bg-white/95 text-ink shadow-md hover:border-accent hover:bg-accent hover:text-white md:h-12 md:w-12"
+                  >
+                    <ChevronRight className="h-6 w-6" aria-hidden="true" />
+                  </button>
+                </>
+              ) : null}
+            </div>
+
+            <div className="shrink-0 border-t border-rule bg-surface px-4 py-2 text-center font-mono text-[9px] uppercase tracking-[0.14em] text-ink-muted">
+              Double-click to zoom · scroll to move around a zoomed image
+              {showNavigation ? ` · ${(activeIndex >= 0 ? activeIndex : 0) + 1} of ${gallery.length}` : ""}
+            </div>
+          </DialogContent>
+        </Dialog>
       ) : null}
     </section>
   );
@@ -379,7 +528,9 @@ function extractYouTubeVideoId(url: string) {
 
 function ProductResources({ product }: { product: ShopifyProduct }) {
   type SupportTab = "video" | "pdf" | "description";
-  const [activeTab, setActiveTab] = useState<SupportTab>("video");
+  const [activeTab, setActiveTab] = useState<SupportTab>("description");
+  const [videoDisclaimerAccepted, setVideoDisclaimerAccepted] = useState(false);
+  const [youtubeAllowed, setYoutubeAllowed] = useState(false);
   const { videoGuide, setupVideoUrl, pdfGuide, datasheets, manuals } = product.technicalDetails;
   const videoLinks = [
     ...(videoGuide ? [{ label: videoGuide.text || "Video guide", url: videoGuide.url }] : []),
@@ -397,9 +548,9 @@ function ProductResources({ product }: { product: ShopifyProduct }) {
   ];
   const hasDescription = Boolean(product.descriptionHtml.trim() || product.description.trim());
   const tabs: Array<{ id: SupportTab; label: string; icon: typeof PlayCircle }> = [
-    { id: "video", label: "Video Guide", icon: PlayCircle },
+    { id: "description", label: "Product Details", icon: FileText },
     { id: "pdf", label: "PDF Guide", icon: FileText },
-    { id: "description", label: "Description", icon: FileText },
+    { id: "video", label: "Video Guide", icon: PlayCircle },
   ];
 
   return (
@@ -462,38 +613,46 @@ function ProductResources({ product }: { product: ShopifyProduct }) {
             id={`support-panel-${activeTab}`}
             role="tabpanel"
             aria-labelledby={`support-tab-${activeTab}`}
-            className="min-h-[260px] p-4 md:min-h-[340px] md:p-6 lg:p-8"
+            className="p-4 md:p-6 lg:p-8"
           >
             {activeTab === "video" ? (
               videoLinks.length ? (
-                <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(240px,0.5fr)]">
-                  {youtubeVideo ? (
-                    <div className="aspect-video overflow-hidden border border-rule bg-charcoal-deep">
-                      <iframe
-                        width="100%"
-                        height="100%"
-                        src={`https://www.youtube-nocookie.com/embed/${youtubeVideo.youtubeId}`}
-                        title={youtubeVideo.label}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        referrerPolicy="strict-origin-when-cross-origin"
-                        allowFullScreen
-                        className="h-full w-full"
+                youtubeVideo && !youtubeAllowed ? (
+                  <YouTubeConsentPanel
+                    accepted={videoDisclaimerAccepted}
+                    onAcceptedChange={setVideoDisclaimerAccepted}
+                    onAllow={() => setYoutubeAllowed(true)}
+                  />
+                ) : (
+                  <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(240px,0.5fr)]">
+                    {youtubeVideo ? (
+                      <div className="aspect-video overflow-hidden border border-rule bg-charcoal-deep">
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          src={`https://www.youtube-nocookie.com/embed/${youtubeVideo.youtubeId}`}
+                          title={youtubeVideo.label}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          referrerPolicy="strict-origin-when-cross-origin"
+                          allowFullScreen
+                          className="h-full w-full"
+                        />
+                      </div>
+                    ) : (
+                      <SupportEmptyState
+                        icon={PlayCircle}
+                        title="Video preview unavailable"
+                        copy="Use the video link to open this guide in a new window."
                       />
+                    )}
+                    <div className="space-y-3">
+                      <div className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-ink-muted">Available videos</div>
+                      {videoLinks.map((video) => (
+                        <SupportLink key={video.url} href={video.url} icon={PlayCircle} label={video.label} />
+                      ))}
                     </div>
-                  ) : (
-                    <SupportEmptyState
-                      icon={PlayCircle}
-                      title="Video preview unavailable"
-                      copy="Use the video link to open this guide in a new window."
-                    />
-                  )}
-                  <div className="space-y-3">
-                    <div className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-ink-muted">Available videos</div>
-                    {videoLinks.map((video) => (
-                      <SupportLink key={video.url} href={video.url} icon={PlayCircle} label={video.label} />
-                    ))}
                   </div>
-                </div>
+                )
               ) : (
                 <SupportEmptyState
                   icon={PlayCircle}
@@ -550,6 +709,85 @@ function ProductResources({ product }: { product: ShopifyProduct }) {
   );
 }
 
+function YouTubeConsentPanel({
+  accepted,
+  onAcceptedChange,
+  onAllow,
+}: {
+  accepted: boolean;
+  onAcceptedChange: (accepted: boolean) => void;
+  onAllow: () => void;
+}) {
+  return (
+    <section
+      aria-labelledby="youtube-disclaimer-title"
+      className="mx-auto max-w-3xl border border-rule bg-surface p-5 md:p-7"
+    >
+      <span className="flex h-11 w-11 items-center justify-center bg-accent/10 text-accent">
+        <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+      </span>
+      <div className="mt-5 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-accent">
+        Third-party content
+      </div>
+      <h3
+        id="youtube-disclaimer-title"
+        className="mt-2 font-display text-xl font-bold uppercase tracking-tight text-ink"
+      >
+        YouTube video disclaimer
+      </h3>
+      <p className="mt-3 text-sm leading-6 text-ink-muted">
+        This video is provided by YouTube, a Google service. If you continue, the YouTube
+        player will load and Google may receive information such as your IP address, device
+        details, and viewing activity, and may store or access information on your device.
+      </p>
+      <p className="mt-3 text-sm leading-6 text-ink-muted">
+        The video is third-party content and is subject to{" "}
+        <a
+          href="https://www.youtube.com/static?template=terms"
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold text-accent underline underline-offset-2"
+        >
+          YouTube&apos;s Terms of Service
+        </a>{" "}
+        and the{" "}
+        <a
+          href="https://policies.google.com/privacy?gl=GB&hl=en-GB"
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold text-accent underline underline-offset-2"
+        >
+          Google Privacy Policy
+        </a>
+        . You can also review our <Link to="/cookies" className="font-semibold text-accent underline underline-offset-2">Cookie Policy</Link>.
+      </p>
+
+      <label className="mt-5 flex cursor-pointer items-start gap-3 border border-rule bg-background p-4 text-sm leading-6 text-ink">
+        <input
+          type="checkbox"
+          checked={accepted}
+          onChange={(event) => onAcceptedChange(event.target.checked)}
+          className="mt-1 h-4 w-4 shrink-0 accent-[hsl(var(--accent))]"
+        />
+        <span>
+          I understand this disclaimer and agree to load the YouTube video and its
+          third-party content.
+        </span>
+      </label>
+
+      <button
+        type="button"
+        disabled={!accepted}
+        onClick={onAllow}
+        className="mt-4 inline-flex min-h-12 items-center justify-center gap-2 bg-accent px-5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-accent-foreground transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-45"
+      >
+        <PlayCircle className="h-4 w-4" aria-hidden="true" />
+        Agree and load YouTube video
+      </button>
+    </section>
+  );
+}
+
 function SupportLink({
   href,
   icon: Icon,
@@ -602,25 +840,27 @@ function QuestionActions({
   variant?: ShopifyVariant;
 }) {
   return (
-    <section className="mt-10 border-t border-rule pt-8">
-      <h2 className="font-display text-lg font-bold uppercase tracking-tight">Got a question?</h2>
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-        <a
-          href={productQuestionMailto(product, variant)}
-          className="inline-flex h-12 items-center justify-center gap-2 border border-rule px-5 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors hover:border-accent hover:text-accent"
-        >
-          <Mail className="h-4 w-4" />
-          Email question
-        </a>
-        <a
-          href={productQuestionWhatsApp(product, variant)}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex h-12 items-center justify-center gap-2 border border-rule px-5 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors hover:border-accent hover:text-accent"
-        >
-          <MessageCircle className="h-4 w-4" />
-          WhatsApp question
-        </a>
+    <section className="border-t border-rule px-4 py-8 md:px-6 md:py-10 lg:px-8">
+      <div className="mx-auto max-w-[1400px]">
+        <h2 className="font-display text-lg font-bold uppercase tracking-tight">Got a question?</h2>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <a
+            href={productQuestionMailto(product, variant)}
+            className="inline-flex h-12 items-center justify-center gap-2 border border-rule px-5 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors hover:border-accent hover:text-accent"
+          >
+            <Mail className="h-4 w-4" />
+            Email question
+          </a>
+          <a
+            href={productQuestionWhatsApp(product, variant)}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-12 items-center justify-center gap-2 border border-rule px-5 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors hover:border-accent hover:text-accent"
+          >
+            <MessageCircle className="h-4 w-4" />
+            WhatsApp question
+          </a>
+        </div>
       </div>
     </section>
   );

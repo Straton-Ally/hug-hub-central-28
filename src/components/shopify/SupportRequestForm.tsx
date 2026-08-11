@@ -1,10 +1,33 @@
-import { CheckCircle2, Send } from "lucide-react";
+import { CheckCircle2, FileText, Paperclip, Send } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
-import { submitSupportRequest } from "@/lib/api/cms.functions";
+import {
+  submitSupportRequest,
+  uploadSupportQuestionAttachment,
+} from "@/lib/api/cms.functions";
 import { useHydrated } from "@/hooks/use-hydrated";
 
 type RequestKind = "tracking" | "resources" | "question" | "unsubscribe";
+
+const QUESTION_ATTACHMENT_ACCEPT = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "application/pdf",
+  "text/plain",
+  "text/csv",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+].join(",");
+const QUESTION_ATTACHMENT_TYPES = new Set(QUESTION_ATTACHMENT_ACCEPT.split(","));
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const MAX_ATTACHMENT_COUNT = 5;
+const MAX_ATTACHMENT_TOTAL_BYTES = 25 * 1024 * 1024;
 
 const COPY: Record<RequestKind, { title: string; subject: string; reference: string; referenceLabel: string; detailsLabel: string }> = {
   tracking: { title: "Request an order update", subject: "Order tracking request", reference: "Order number", referenceLabel: "Order number", detailsLabel: "Delivery postcode or company name" },
@@ -19,13 +42,40 @@ export function SupportRequestForm({ kind }: { kind: RequestKind }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reference, setReference] = useState("");
+  const [attachmentNames, setAttachmentNames] = useState<string[]>([]);
+  const [uploadWarning, setUploadWarning] = useState("");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
+    const files = data
+      .getAll("attachments")
+      .filter((value): value is File => value instanceof File && value.size > 0);
     setBusy(true);
     setError("");
+    setUploadWarning("");
+
+    if (files.length > MAX_ATTACHMENT_COUNT) {
+      setError(`Attach no more than ${MAX_ATTACHMENT_COUNT} files.`);
+      setBusy(false);
+      return;
+    }
+    if (files.some((file) => file.size > MAX_ATTACHMENT_BYTES)) {
+      setError("Each attachment must be 10 MB or smaller.");
+      setBusy(false);
+      return;
+    }
+    if (files.reduce((total, file) => total + file.size, 0) > MAX_ATTACHMENT_TOTAL_BYTES) {
+      setError("The combined attachment size must be 25 MB or smaller.");
+      setBusy(false);
+      return;
+    }
+    if (files.some((file) => !QUESTION_ATTACHMENT_TYPES.has(file.type))) {
+      setError("Use an image, PDF, Word, Excel, PowerPoint, TXT, or CSV file.");
+      setBusy(false);
+      return;
+    }
 
     try {
       const result = await submitSupportRequest({
@@ -43,7 +93,27 @@ export function SupportRequestForm({ kind }: { kind: RequestKind }) {
         return;
       }
 
+      const failedUploads: string[] = [];
+      for (const file of files) {
+        try {
+          const uploadData = new FormData();
+          uploadData.set("reference", result.reference);
+          uploadData.set("attachment", file);
+          const upload = await uploadSupportQuestionAttachment({ data: uploadData });
+          if (!upload.ok) failedUploads.push(`${file.name}: ${upload.error ?? "upload failed"}`);
+        } catch {
+          failedUploads.push(`${file.name}: upload failed`);
+        }
+      }
+      if (failedUploads.length) {
+        setUploadWarning(
+          `Your question was received, but ${failedUploads.length} ${
+            failedUploads.length === 1 ? "attachment" : "attachments"
+          } could not be uploaded. ${failedUploads.join(" ")}`,
+        );
+      }
       setReference(result.reference);
+      setAttachmentNames([]);
       form.reset();
     } catch {
       setError("We could not send your request. Please check your details and try again.");
@@ -65,6 +135,11 @@ export function SupportRequestForm({ kind }: { kind: RequestKind }) {
             <CheckCircle2 aria-hidden="true" className="mr-2 inline h-5 w-5 text-accent" />
             Thank you. Your request has been received and our reference is{" "}
             <strong className="font-semibold">{reference}</strong>. We will reply by email shortly.
+            {uploadWarning ? (
+              <span className="mt-3 block border border-amber/50 bg-amber/10 p-3 text-amber-100">
+                {uploadWarning}
+              </span>
+            ) : null}
           </div>
         ) : (
           <form method="post" onSubmit={submit} className="relative mt-6 grid gap-4 md:grid-cols-2">
@@ -84,6 +159,50 @@ export function SupportRequestForm({ kind }: { kind: RequestKind }) {
               {copy.detailsLabel}
               <textarea name="details" rows={4} required={kind !== "unsubscribe"} className="min-w-0 resize-y border border-white/25 bg-white/10 px-4 py-3 font-sans text-sm normal-case tracking-normal text-white focus:border-accent focus:outline-none" />
             </label>
+
+            {kind === "question" ? (
+              <div className="grid gap-2 md:col-span-2">
+                <label htmlFor="question-attachments" className="font-mono text-[11px] uppercase tracking-[0.16em] text-white/80">
+                  Attach files (optional)
+                </label>
+                <div className="border border-dashed border-white/30 bg-white/[0.06] p-4 transition-colors focus-within:border-accent">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center bg-accent/15 text-accent">
+                      <Paperclip aria-hidden="true" className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <input
+                        id="question-attachments"
+                        name="attachments"
+                        type="file"
+                        multiple
+                        accept={QUESTION_ATTACHMENT_ACCEPT}
+                        onChange={(event) =>
+                          setAttachmentNames(
+                            Array.from(event.currentTarget.files ?? []).map((file) => file.name),
+                          )
+                        }
+                        className="w-full text-sm text-white/80 file:mr-3 file:border-0 file:bg-accent file:px-4 file:py-2 file:font-mono file:text-[10px] file:font-bold file:uppercase file:tracking-[0.14em] file:text-white hover:file:brightness-110"
+                      />
+                      <p className="mt-2 font-sans text-xs normal-case tracking-normal text-white/50">
+                        Up to 5 files. Images, PDF, Word, Excel, PowerPoint, TXT, or CSV.
+                        Maximum 10 MB each and 25 MB combined.
+                      </p>
+                    </div>
+                  </div>
+                  {attachmentNames.length ? (
+                    <ul className="mt-4 grid gap-2 border-t border-white/15 pt-3 sm:grid-cols-2">
+                      {attachmentNames.map((name) => (
+                        <li key={name} className="flex min-w-0 items-center gap-2 text-xs text-white/75">
+                          <FileText aria-hidden="true" className="h-4 w-4 shrink-0 text-accent" />
+                          <span className="truncate">{name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
 
             {error ? (
               <div role="alert" className="border border-red-400/40 bg-red-500/10 p-4 text-sm leading-6 text-red-200 md:col-span-2">

@@ -9,7 +9,6 @@ const informationLinks = [
   { label: "About us", to: "/about-us" },
   { label: "View Cart", to: "/cart" },
   { label: "Build a Quote", to: "/quote" },
-  { label: "Open trade account", to: "/trade-account" },
   { label: "Track order", to: "/track-order" },
   { label: "My order history", to: "/account" },
   { label: "Got a question", to: "/got-a-question" },
@@ -39,9 +38,6 @@ export function SiteFooter() {
               SPARES<span className="text-accent">.</span>AUTOMATION
             </div>
           </Link>
-          <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/70">
-            Trade catalogue, quote support, and parts help for machinery teams.
-          </p>
           <Link
             to="/products"
             search={{ category: "all", availability: "all", sort: "newest" }}

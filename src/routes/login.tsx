@@ -1,12 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, User } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { z } from "zod";
 
 import { SiteHeader } from "@/components/shopify/SiteHeader";
 import { loginShopifyCustomer } from "@/lib/api/shopify.functions";
 
+const ALLOWED_REDIRECTS = ["/account", "/track-order", "/returns-policy", "/quote"] as const;
+
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign In | Spares Automation" }, { name: "robots", content: "noindex, follow" }] }),
+  validateSearch: z.object({
+    redirect: z.enum(ALLOWED_REDIRECTS).optional(),
+  }),
   component: LoginPage,
 });
 
@@ -19,6 +25,7 @@ function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<LoginResult>({ status: "idle", message: "" });
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,7 +56,7 @@ function LoginPage() {
         message: "You have successfully signed in!",
       });
       
-      setTimeout(() => navigate({ to: "/account" }), 1000);
+      setTimeout(() => navigate({ to: redirect ?? "/account" }), 1000);
     } catch (error) {
       setResult({
         status: "error",

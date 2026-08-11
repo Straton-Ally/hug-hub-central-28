@@ -12,16 +12,16 @@ import {
 /**
  * CMS data model.
  *
- * The CMS owns form submissions (part inquiries, trade/credit account
- * applications, support requests) and the staff who manage them. It does NOT
- * store orders, carts, or products — those remain in Shopify. Approved
- * trade/credit applications are synced to Shopify as tagged customers.
+ * The CMS owns form submissions (part inquiries, credit account applications,
+ * return requests, support requests) and the staff who manage them. It does NOT store orders,
+ * carts, or products — those remain in Shopify. Approved credit applications
+ * are synced to Shopify as tagged customers.
  */
 
 export const submissionType = pgEnum("submission_type", [
   "part_inquiry",
-  "trade_account",
   "credit_account",
+  "return_request",
   "support_tracking",
   "support_resources",
   "support_question",

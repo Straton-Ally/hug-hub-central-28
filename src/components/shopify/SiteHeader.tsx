@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { BriefcaseBusiness, CreditCard, Globe, Menu, Phone, Search, ShoppingCart, User, UserPlus, X } from "lucide-react";
+import { CreditCard, Globe, Menu, Phone, Search, ShoppingCart, User, UserPlus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { getShopifyCart, getShopifyCustomer } from "@/lib/api/shopify.functions";
@@ -7,15 +7,15 @@ import { getStoredCartId } from "@/lib/shopify/cart";
 import { SITE } from "@/lib/site";
 
 const navigation = [
-  { label: "All Products", to: "/products" },
-  { label: "Asphalt / Blacktop Spares", to: "/asphalt" },
-  { label: "Readymix / Concrete Spares", to: "/concrete" },
-  { label: "Packing Machinery Spares", to: "/packing" },
-  { label: "Automation and Drives", to: "/automation" },
-  { label: "Home Automation and Controls", to: "/home-controls" },
-  { label: "Control Panels and Software", to: "/control-panels-software" },
-  { label: "PDF and Videos", to: "/resources" },
-  { label: "Contact", to: "/contact-us" },
+  { label: "All Products", desktopLines: ["All Products"], to: "/products" },
+  { label: "Asphalt Blacktop", desktopLines: ["Asphalt", "Blacktop"], to: "/asphalt" },
+  { label: "Readymix Concrete", desktopLines: ["Readymix", "Concrete"], to: "/concrete" },
+  { label: "Packing Machinery", desktopLines: ["Packing", "Machinery"], to: "/packing" },
+  { label: "Automation and Drives", desktopLines: ["Automation and", "Drives"], to: "/automation" },
+  { label: "Home Automation and Controls", desktopLines: ["Home Automation", "and Controls"], to: "/home-controls" },
+  { label: "Control Panels and Software", desktopLines: ["Control Panels", "and Software"], to: "/control-panels-software" },
+  { label: "PDF and Videos", desktopLines: ["PDF and Videos"], to: "/resources" },
+  { label: "Contact", desktopLines: ["Contact"], to: "/contact-us" },
 ] as const;
 
 export function SiteHeader() {
@@ -117,10 +117,18 @@ export function SiteHeader() {
       </div>
 
       <nav aria-label="Main navigation" className="hidden border-b border-white/10 bg-charcoal-deep xl:block">
-        <div className="flex w-full flex-nowrap items-center justify-between px-4 2xl:px-6">
+        <div className="grid w-full grid-cols-9 px-3 2xl:px-5">
           {navigation.map((item) => (
-            <Link key={item.to} to={item.to} activeProps={{ "aria-current": "page", className: "text-white bg-white/10" }} className="inline-flex min-h-10 shrink-0 items-center whitespace-nowrap px-1.5 font-mono text-[8px] uppercase tracking-[0.06em] text-white/65 transition-colors hover:bg-white/5 hover:text-white 2xl:px-2 2xl:text-[10px] 2xl:tracking-[0.08em]">
-              {item.label}
+            <Link
+              key={item.to}
+              to={item.to}
+              aria-label={item.label}
+              activeProps={{ "aria-current": "page", className: "text-white bg-white/10" }}
+              className="inline-flex min-h-16 min-w-0 flex-col items-center justify-center px-2 text-center font-display text-[11px] font-bold uppercase leading-[1.2] tracking-[-0.01em] text-white/85 transition-colors hover:bg-white/5 hover:text-white 2xl:text-[12px]"
+            >
+              {item.desktopLines.map((line) => (
+                <span key={line} className="block">{line}</span>
+              ))}
             </Link>
           ))}
         </div>
@@ -130,7 +138,7 @@ export function SiteHeader() {
         <nav id="mobile-navigation" aria-label="Mobile navigation" className="border-b border-white/10 bg-charcoal-deep px-4 py-4 xl:hidden">
           <div className="grid grid-cols-2 gap-2">
             {navigation.map((item) => (
-              <Link key={item.to} to={item.to} onClick={() => setMobileMenuOpen(false)} className="flex min-h-11 items-center border border-white/10 px-3 font-mono text-[10px] uppercase tracking-[0.14em] text-white/75 hover:border-accent hover:text-white">
+              <Link key={item.to} to={item.to} onClick={() => setMobileMenuOpen(false)} className="flex min-h-12 items-center border border-white/20 px-3 font-display text-sm font-bold uppercase leading-tight text-white/85 hover:border-accent hover:text-white">
                 {item.label}
               </Link>
             ))}
@@ -159,14 +167,10 @@ function AccountApplicationLinks({ mobile = false }: { mobile?: boolean }) {
     : "flex min-h-7 items-center text-white/75 hover:text-white";
 
   return (
-    <div className={mobile ? "grid grid-cols-1 gap-2 sm:grid-cols-2" : "flex items-center gap-5"}>
+    <div className={mobile ? "grid grid-cols-1 gap-2" : "flex items-center gap-5"}>
       <Link to="/credit-account" className={`${className} gap-1.5`}>
         <CreditCard aria-hidden="true" className="h-4 w-4 shrink-0" />
         Open Credit Account
-      </Link>
-      <Link to="/trade-account" className={`${className} gap-1.5`}>
-        <BriefcaseBusiness aria-hidden="true" className="h-4 w-4 shrink-0" />
-        Open Trade Account
       </Link>
     </div>
   );

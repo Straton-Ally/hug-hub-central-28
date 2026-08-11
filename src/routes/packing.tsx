@@ -2,15 +2,63 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { CollectionPage } from "@/components/shopify/CollectionPage";
 import { getCollection, getLatestProducts } from "@/lib/api/shopify.functions";
-import packing from "@/assets/cat-packing.jpg";
+import packing from "@/assets/packing machines pic.jpg";
 import { SITE } from "@/lib/site";
 
 const collectionHandle = "packing";
 const productLines = [
-  { slug: "sealers", label: "Sealers", keywords: ["sealer", "seal", "heating element"] },
-  { slug: "rollers", label: "Rollers", keywords: ["roller", "bearing"] },
-  { slug: "belts", label: "Belts", keywords: ["belt", "timing", "drive"] },
-  { slug: "conveyors", label: "Conveyors", keywords: ["conveyor", "transfer"] },
+  {
+    slug: "automation-sensors",
+    label: "Automation / Sensors",
+    keywords: [
+      "automation",
+      "sensor",
+      "photoelectric",
+      "proximity",
+      "encoder",
+      "detector",
+      "limit switch",
+      "PLC",
+    ],
+  },
+  {
+    slug: "bag-placement",
+    label: "Bag placement",
+    keywords: [
+      "bag placement",
+      "bag placer",
+      "bagging",
+      "bag gripper",
+      "bag clamp",
+      "sack",
+    ],
+  },
+  {
+    slug: "filling",
+    label: "Filling",
+    keywords: [
+      "filling",
+      "filler",
+      "dosing",
+      "doser",
+      "weighing",
+      "weigher",
+      "filling spout",
+    ],
+  },
+  {
+    slug: "discharge-palletising",
+    label: "Discharge & Palletising",
+    keywords: [
+      "discharge",
+      "palletising",
+      "palletizing",
+      "palletiser",
+      "palletizer",
+      "pallet",
+      "outfeed",
+    ],
+  },
 ];
 
 export const Route = createFileRoute("/packing")({

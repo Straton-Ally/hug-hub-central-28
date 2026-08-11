@@ -1,13 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import controls from "@/assets/cat-automation.jpg";
+import controls from "@/assets/Control panels and software pic.jpg";
 import { CollectionPage } from "@/components/shopify/CollectionPage";
 import { getCollection, getLatestProducts } from "@/lib/api/shopify.functions";
 import { SITE } from "@/lib/site";
 
 const collectionHandle = "control-panels-software";
+const productLines = [
+  {
+    slug: "control-panels",
+    label: "Control Panels",
+    keywords: ["control panel", "panel", "cabinet", "enclosure"],
+  },
+  {
+    slug: "software-design-programming",
+    label: "Software Design and Programming",
+    keywords: ["software", "programming", "program", "plc", "hmi", "scada"],
+  },
+];
 
 export const Route = createFileRoute("/control-panels-software")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    line: typeof search.line === "string" ? search.line : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Control Panels and Software | Spares Automation" },
@@ -32,6 +47,7 @@ export const Route = createFileRoute("/control-panels-software")({
 
 function ControlPanelsSoftwarePage() {
   const { collection, products } = Route.useLoaderData();
+  const { line } = Route.useSearch();
 
   return (
     <CollectionPage
@@ -42,6 +58,8 @@ function ControlPanelsSoftwarePage() {
       collection={collection}
       fallbackProducts={products}
       expectedHandle={collectionHandle}
+      productLines={productLines}
+      activeLine={line}
     />
   );
 }

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ExternalLink, LogOut, PackageSearch, User } from "lucide-react";
+import { ExternalLink, LogOut, PackageSearch, RotateCcw, User } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { SiteHeader } from "@/components/shopify/SiteHeader";
@@ -77,7 +77,7 @@ function AccountPage() {
           <section className="border border-rule bg-surface p-5 md:p-8">
             <User className="mb-4 md:mb-5 h-7 w-7 md:h-8 md:w-8 text-accent" />
             <h2 className="font-display text-xl md:text-2xl font-bold uppercase tracking-tight">
-              Sign in to view your trade account
+              Sign in to view your account
             </h2>
             <p className="mt-3 md:mt-4 max-w-2xl text-sm leading-relaxed text-ink-muted">
               Sign in securely to view your account details and continue to the catalogue.
@@ -184,11 +184,19 @@ function AccountPage() {
                           {order.lineItems.map((item) => `${item.quantity}× ${item.title}${item.variant?.title && item.variant.title !== "Default Title" ? ` (${item.variant.title})` : ""}`).join(", ")}
                         </p>
                       </div>
-                      <div className="flex items-center justify-between gap-4 lg:justify-end">
+                      <div className="grid gap-2 lg:justify-items-end">
                         <strong className="font-display text-lg text-ink">{formatMoney(order.totalPrice)}</strong>
-                        <a href={order.statusUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-2 border border-accent px-4 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-accent hover:bg-accent hover:text-white">
-                          Order status <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
-                        </a>
+                        <div className="flex flex-wrap gap-2 lg:justify-end">
+                          <a
+                            href={`/returns-policy?order=${encodeURIComponent(order.name)}#return-request`}
+                            className="inline-flex h-10 items-center justify-center gap-2 bg-accent px-4 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-white hover:brightness-110"
+                          >
+                            Return items <RotateCcw aria-hidden="true" className="h-3.5 w-3.5" />
+                          </a>
+                          <a href={order.statusUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-2 border border-accent px-4 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-accent hover:bg-accent hover:text-white">
+                            Order status <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
+                          </a>
+                        </div>
                       </div>
                     </article>
                   ))}

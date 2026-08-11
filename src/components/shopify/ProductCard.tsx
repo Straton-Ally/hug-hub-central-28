@@ -34,9 +34,6 @@ export function ProductCard({ product }: ProductCardProps) {
               Image Pending
             </div>
           )}
-          <div className="absolute left-3 top-3 md:left-4 md:top-4 bg-charcoal-deep px-2 md:px-3 py-1 font-mono text-[8px] md:text-[9px] uppercase tracking-[0.22em] text-white/70">
-            {product.productType || product.vendor || "Spares"}
-          </div>
           <div aria-hidden="true" className="absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center bg-charcoal-deep text-accent opacity-0 transition-opacity group-hover:opacity-100 md:bottom-4 md:right-4 md:h-9 md:w-9">
             <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4" />
           </div>
@@ -58,7 +55,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="mt-auto flex items-end justify-between gap-3 md:gap-4 pt-4 md:pt-6">
           <div>
             <div className="font-mono text-[8px] md:text-[9px] uppercase tracking-[0.24em] text-ink-muted">
-              Trade Price
+              Price each
             </div>
             <div className="mt-1 font-display text-base md:text-lg font-bold text-ink">
               {formatProductPrice(product)}
