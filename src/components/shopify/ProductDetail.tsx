@@ -4,9 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
-  Mail,
   Maximize2,
-  MessageCircle,
   Minus,
   PackageCheck,
   PlayCircle,
@@ -37,7 +35,6 @@ import {
 } from "@/lib/shopify/format";
 import type { ShopifyProduct, ShopifyVariant } from "@/lib/shopify/types";
 import { SITE } from "@/lib/site";
-import { productQuestionMailto, productQuestionWhatsApp } from "@/lib/quote";
 
 type ProductDetailProps = {
   product: ShopifyProduct;
@@ -189,15 +186,18 @@ export function ProductDetail({ product }: ProductDetailProps) {
                   </div>
                 </div>
               </div>
+              <Link
+                to="/contact-us"
+                className="inline-flex h-12 w-full items-center justify-center border border-rule bg-surface px-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-ink transition-colors hover:border-accent hover:text-accent sm:w-auto"
+              >
+                Got a question?
+              </Link>
             </div>
 
           </section>
 
           <div className="bg-surface lg:col-span-2">
             <ProductResources product={product} />
-          </div>
-          <div className="bg-surface lg:col-span-2">
-            <QuestionActions product={product} variant={selectedVariant} />
           </div>
         </section>
       </main>
@@ -832,36 +832,3 @@ function SupportEmptyState({
   );
 }
 
-function QuestionActions({
-  product,
-  variant,
-}: {
-  product: ShopifyProduct;
-  variant?: ShopifyVariant;
-}) {
-  return (
-    <section className="border-t border-rule px-4 py-8 md:px-6 md:py-10 lg:px-8">
-      <div className="mx-auto max-w-[1400px]">
-        <h2 className="font-display text-lg font-bold uppercase tracking-tight">Got a question?</h2>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-          <a
-            href={productQuestionMailto(product, variant)}
-            className="inline-flex h-12 items-center justify-center gap-2 border border-rule px-5 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors hover:border-accent hover:text-accent"
-          >
-            <Mail className="h-4 w-4" />
-            Email question
-          </a>
-          <a
-            href={productQuestionWhatsApp(product, variant)}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-12 items-center justify-center gap-2 border border-rule px-5 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors hover:border-accent hover:text-accent"
-          >
-            <MessageCircle className="h-4 w-4" />
-            WhatsApp question
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}

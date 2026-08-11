@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ExternalLink, FileText, PlayCircle } from "lucide-react";
+import { ExternalLink, FileText, PlayCircle, ShieldCheck } from "lucide-react";
+import { useState } from "react";
 
 import { SiteFooter } from "@/components/shopify/SiteFooter";
 import { SiteHeader } from "@/components/shopify/SiteHeader";
@@ -128,32 +129,13 @@ function ResourcesPage() {
                         </div>
 
                         <div className="mt-5 grid gap-3">
-                          {product.resources.map((resource) => (
-                            <a
-                              key={`${resource.type}-${resource.url}`}
-                              href={resource.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="group flex min-h-16 items-center gap-3 border border-rule bg-surface p-3.5 transition-colors hover:border-accent"
-                            >
-                              <span className="flex h-10 w-10 shrink-0 items-center justify-center bg-accent/10 text-accent group-hover:bg-accent group-hover:text-white">
-                                {resource.type === "video" ? (
-                                  <PlayCircle className="h-5 w-5" aria-hidden="true" />
-                                ) : (
-                                  <FileText className="h-5 w-5" aria-hidden="true" />
-                                )}
-                              </span>
-                              <span className="min-w-0 flex-1">
-                                <span className="block font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-ink-muted">
-                                  {resource.detail}
-                                </span>
-                                <span className="mt-1 block break-words text-sm font-semibold text-ink group-hover:text-accent">
-                                  {resource.label}
-                                </span>
-                              </span>
-                              <ExternalLink className="h-4 w-4 shrink-0 text-ink-muted group-hover:text-accent" aria-hidden="true" />
-                            </a>
-                          ))}
+                          {product.resources.map((resource) =>
+                            resource.type === "video" ? (
+                              <ResourceVideoLink key={`${resource.type}-${resource.url}`} resource={resource} />
+                            ) : (
+                              <ResourceDocumentLink key={`${resource.type}-${resource.url}`} resource={resource} />
+                            ),
+                          )}
                         </div>
                       </article>
                     ))}
@@ -232,4 +214,132 @@ function slugify(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function ResourceDocumentLink({ resource }: { resource: ResourceLink }) {
+  return (
+    <a
+      href={resource.url}
+      target="_blank"
+      rel="noreferrer"
+      className="group flex min-h-16 items-center gap-3 border border-rule bg-surface p-3.5 transition-colors hover:border-accent"
+    >
+      <ResourceIcon icon="document" />
+      <ResourceText resource={resource} />
+      <ExternalLink className="h-4 w-4 shrink-0 text-ink-muted group-hover:text-accent" aria-hidden="true" />
+    </a>
+  );
+}
+
+function ResourceVideoLink({ resource }: { resource: ResourceLink }) {
+  const [open, setOpen] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+
+  function openVideo() {
+    window.open(resource.url, "_blank", "noopener,noreferrer");
+  }
+
+  return (
+    <div className="border border-rule bg-surface">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="group flex min-h-16 w-full items-center gap-3 p-3.5 text-left transition-colors hover:border-accent"
+      >
+        <ResourceIcon icon="video" />
+        <ResourceText resource={resource} />
+        <ExternalLink className="h-4 w-4 shrink-0 text-ink-muted group-hover:text-accent" aria-hidden="true" />
+      </button>
+
+      {open ? (
+        <div className="border-t border-rule bg-background p-4">
+          <div className="flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center bg-accent/10 text-accent">
+              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <div>
+              <div className="font-display text-sm font-bold uppercase tracking-tight text-ink">
+                YouTube video disclaimer
+              </div>
+              <p className="mt-2 text-sm leading-6 text-ink-muted">
+                This video is provided by YouTube, a Google service. If you continue, YouTube may
+                receive information such as your IP address, device details, and viewing activity,
+                and may store or access information on your device.
+              </p>
+              <p className="mt-2 text-sm leading-6 text-ink-muted">
+                The video is third-party content and is subject to{" "}
+                <a
+                  href="https://www.youtube.com/static?template=terms"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-accent underline underline-offset-2"
+                >
+                  YouTube&apos;s Terms of Service
+                </a>{" "}
+                and the{" "}
+                <a
+                  href="https://policies.google.com/privacy?gl=GB&hl=en-GB"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-accent underline underline-offset-2"
+                >
+                  Google Privacy Policy
+                </a>
+                . You can also review our{" "}
+                <Link to="/cookies" className="font-semibold text-accent underline underline-offset-2">
+                  Cookie Policy
+                </Link>
+                .
+              </p>
+            </div>
+          </div>
+
+          <label className="mt-4 flex cursor-pointer items-start gap-3 border border-rule bg-surface p-3 text-sm leading-6 text-ink">
+            <input
+              type="checkbox"
+              checked={accepted}
+              onChange={(event) => setAccepted(event.target.checked)}
+              className="mt-1 h-4 w-4 shrink-0 accent-[hsl(var(--accent))]"
+            />
+            <span>I understand this disclaimer and agree to open the YouTube video.</span>
+          </label>
+
+          <button
+            type="button"
+            disabled={!accepted}
+            onClick={openVideo}
+            className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 bg-accent px-4 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-accent-foreground transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            <PlayCircle className="h-4 w-4" aria-hidden="true" />
+            Agree and open video
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ResourceIcon({ icon }: { icon: ResourceLink["type"] }) {
+  return (
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center bg-accent/10 text-accent group-hover:bg-accent group-hover:text-white">
+      {icon === "video" ? (
+        <PlayCircle className="h-5 w-5" aria-hidden="true" />
+      ) : (
+        <FileText className="h-5 w-5" aria-hidden="true" />
+      )}
+    </span>
+  );
+}
+
+function ResourceText({ resource }: { resource: ResourceLink }) {
+  return (
+    <span className="min-w-0 flex-1">
+      <span className="block font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-ink-muted">
+        {resource.detail}
+      </span>
+      <span className="mt-1 block break-words text-sm font-semibold text-ink group-hover:text-accent">
+        {resource.label}
+      </span>
+    </span>
+  );
 }
