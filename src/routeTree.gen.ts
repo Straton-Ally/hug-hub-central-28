@@ -14,6 +14,7 @@ import { Route as TrackOrderRouteImport } from './routes/track-order'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as ReturnsPolicyRouteImport } from './routes/returns-policy'
+import { Route as ReturnsRouteImport } from './routes/returns'
 import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as QuoteRouteImport } from './routes/quote'
@@ -66,6 +67,11 @@ const SearchRoute = SearchRouteImport.update({
 const ReturnsPolicyRoute = ReturnsPolicyRouteImport.update({
   id: '/returns-policy',
   path: '/returns-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReturnsRoute = ReturnsRouteImport.update({
+  id: '/returns',
+  path: '/returns',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResourcesRoute = ResourcesRouteImport.update({
@@ -233,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/quote': typeof QuoteRoute
   '/register': typeof RegisterRoute
   '/resources': typeof ResourcesRoute
+  '/returns': typeof ReturnsRoute
   '/returns-policy': typeof ReturnsPolicyRoute
   '/search': typeof SearchRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
@@ -268,6 +275,7 @@ export interface FileRoutesByTo {
   '/quote': typeof QuoteRoute
   '/register': typeof RegisterRoute
   '/resources': typeof ResourcesRoute
+  '/returns': typeof ReturnsRoute
   '/returns-policy': typeof ReturnsPolicyRoute
   '/search': typeof SearchRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
@@ -304,6 +312,7 @@ export interface FileRoutesById {
   '/quote': typeof QuoteRoute
   '/register': typeof RegisterRoute
   '/resources': typeof ResourcesRoute
+  '/returns': typeof ReturnsRoute
   '/returns-policy': typeof ReturnsPolicyRoute
   '/search': typeof SearchRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
@@ -341,6 +350,7 @@ export interface FileRouteTypes {
     | '/quote'
     | '/register'
     | '/resources'
+    | '/returns'
     | '/returns-policy'
     | '/search'
     | '/terms-and-conditions'
@@ -376,6 +386,7 @@ export interface FileRouteTypes {
     | '/quote'
     | '/register'
     | '/resources'
+    | '/returns'
     | '/returns-policy'
     | '/search'
     | '/terms-and-conditions'
@@ -411,6 +422,7 @@ export interface FileRouteTypes {
     | '/quote'
     | '/register'
     | '/resources'
+    | '/returns'
     | '/returns-policy'
     | '/search'
     | '/terms-and-conditions'
@@ -447,6 +459,7 @@ export interface RootRouteChildren {
   QuoteRoute: typeof QuoteRoute
   RegisterRoute: typeof RegisterRoute
   ResourcesRoute: typeof ResourcesRoute
+  ReturnsRoute: typeof ReturnsRoute
   ReturnsPolicyRoute: typeof ReturnsPolicyRoute
   SearchRoute: typeof SearchRoute
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
@@ -494,6 +507,13 @@ declare module '@tanstack/react-router' {
       path: '/returns-policy'
       fullPath: '/returns-policy'
       preLoaderRoute: typeof ReturnsPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/returns': {
+      id: '/returns'
+      path: '/returns'
+      fullPath: '/returns'
+      preLoaderRoute: typeof ReturnsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/resources': {
@@ -719,6 +739,7 @@ const rootRouteChildren: RootRouteChildren = {
   QuoteRoute: QuoteRoute,
   RegisterRoute: RegisterRoute,
   ResourcesRoute: ResourcesRoute,
+  ReturnsRoute: ReturnsRoute,
   ReturnsPolicyRoute: ReturnsPolicyRoute,
   SearchRoute: SearchRoute,
   TermsAndConditionsRoute: TermsAndConditionsRoute,

@@ -6,7 +6,7 @@ export function SignInRequired({
   title = "Sign in to continue",
   description,
 }: {
-  redirect: "/track-order" | "/returns-policy";
+  redirect: "/track-order" | "/returns";
   title?: string;
   description: string;
 }) {
@@ -16,9 +16,7 @@ export function SignInRequired({
       <h2 className="font-display text-xl font-bold uppercase tracking-tight md:text-2xl">
         {title}
       </h2>
-      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-muted md:mt-4">
-        {description}
-      </p>
+      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-muted md:mt-4">{description}</p>
       <div className="mt-6 flex flex-wrap gap-3 md:mt-8">
         <Link
           to="/login"

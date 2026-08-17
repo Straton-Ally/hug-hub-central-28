@@ -65,14 +65,14 @@ test("product question form accepts multiple image and document attachments", as
   await expect(page.getByText("Maximum 10 MB each and 25 MB combined.")).toBeVisible();
 });
 
-test("returns page captures items, quantities, reasons, and contact details", async ({ page }) => {
-  await page.goto("/returns-policy");
-  await expect(page.getByRole("heading", { name: "Request a return" })).toBeVisible();
-  await expect(page.getByLabel("Order number *")).toBeVisible();
-  await expect(page.getByLabel("Product name or part number *")).toBeVisible();
-  await expect(page.getByLabel("Reason for return *")).toBeVisible();
-  await expect(page.getByLabel("Quantity *")).toHaveValue("1");
-  await expect(page.getByRole("button", { name: "Submit return request" })).toBeVisible();
+test("returns page directs signed-out customers to their account", async ({ page }) => {
+  await page.goto("/returns");
+  await expect(page.getByRole("heading", { name: "Returns", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in to start a return" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Sign in", exact: true }).last()).toHaveAttribute(
+    "href",
+    "/login?redirect=%2Freturns",
+  );
 });
 
 test("return request persists in the CMS with an email reference", async ({ page }, testInfo) => {
@@ -84,7 +84,7 @@ test("return request persists in the CMS with an email reference", async ({ page
   const sql = postgres(cmsTestEnv.databaseUrl!, { max: 1, prepare: false });
 
   try {
-    await page.goto("/returns-policy", { waitUntil: "networkidle" });
+    await page.goto("/returns", { waitUntil: "networkidle" });
     await page.getByLabel("Order number *").fill(orderNumber);
     await page.getByLabel("Product name or part number *").fill("Siemens return test");
     await page.getByLabel("Quantity *").fill("2");
@@ -98,7 +98,9 @@ test("return request persists in the CMS with an email reference", async ({ page
 
     await expect
       .poll(async () => {
-        const rows = await sql<{ type: string; order_number: string; items: string; total: string }[]>`
+        const rows = await sql<
+          { type: string; order_number: string; items: string; total: string }[]
+        >`
           select type::text,
                  payload->>'Order number' as order_number,
                  payload->>'Items being returned' as items,
@@ -153,9 +155,7 @@ test("public submission persists and staff can review, update, and annotate it",
     });
     const invalidFields = await page
       .locator("form:has(#part-number) :invalid")
-      .evaluateAll((elements) =>
-        elements.map((element) => (element as HTMLInputElement).name),
-      );
+      .evaluateAll((elements) => elements.map((element) => (element as HTMLInputElement).name));
     expect(invalidFields).toEqual([]);
     await page.getByRole("button", { name: "Submit Request" }).click();
 
@@ -166,11 +166,13 @@ test("public submission persists and staff can review, update, and annotate it",
 
     await expect
       .poll(async () => {
-        const rows = await sql<{
-          status: string;
-          attachment_count: number;
-          filename: string | null;
-        }[]>`
+        const rows = await sql<
+          {
+            status: string;
+            attachment_count: number;
+            filename: string | null;
+          }[]
+        >`
           select s.status,
                  count(a.id)::int as attachment_count,
                  max(a.filename) as filename
