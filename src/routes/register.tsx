@@ -37,6 +37,16 @@ function RegisterPage() {
     setResult({ status: "idle", message: "" });
 
     const form = new FormData(formElement);
+
+    if (form.get("acceptsLegal") !== "on") {
+      setBusy(false);
+      setResult({
+        status: "error",
+        message: "You must agree to the Terms & Conditions and acknowledge the Privacy Policy to create an account.",
+      });
+      return;
+    }
+
     const phone = normalizePhoneForShopify(
       String(form.get("countryCode") ?? "+44"),
       String(form.get("phone") ?? ""),
@@ -155,6 +165,34 @@ function RegisterPage() {
                 className="mt-1 h-4 w-4 accent-[hsl(var(--accent))]"
               />
               Send me updates about parts availability, trade offers and new arrivals.
+            </label>
+
+            <label className="flex items-start gap-3 text-sm leading-6 text-ink-muted">
+              <input
+                name="acceptsLegal"
+                type="checkbox"
+                required
+                className="mt-1 h-4 w-4 shrink-0 accent-[hsl(var(--accent))]"
+              />
+              <span>
+                I agree to the{" "}
+                <Link
+                  to="/terms-and-conditions"
+                  target="_blank"
+                  className="font-semibold text-ink underline decoration-rule underline-offset-4 transition-colors hover:text-accent"
+                >
+                  Terms &amp; Conditions
+                </Link>{" "}
+                and acknowledge the{" "}
+                <Link
+                  to="/privacy-policy"
+                  target="_blank"
+                  className="font-semibold text-ink underline decoration-rule underline-offset-4 transition-colors hover:text-accent"
+                >
+                  Privacy Policy
+                </Link>
+                .
+              </span>
             </label>
 
             {result.message ? (

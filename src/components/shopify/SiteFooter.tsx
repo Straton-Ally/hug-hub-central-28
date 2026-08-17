@@ -16,10 +16,11 @@ const informationLinks = [
 
 const helpLinks = [
   { label: "Terms & Conditions", to: "/terms-and-conditions" },
+  { label: "Returns", to: "/returns" },
   { label: "Returns Policy", to: "/returns-policy" },
   { label: "Delivery Information", to: "/delivery-information" },
   { label: "Privacy Policy", to: "/privacy-policy" },
-  { label: "Use of Cookies", to: "/cookies" },
+  { label: "Cookie Policy", to: "/cookies" },
   { label: "Disclaimer", to: "/disclaimer" },
   { label: "Unsubscribe", to: "/unsubscribe" },
 ];
@@ -59,7 +60,10 @@ export function SiteFooter() {
             <ChevronRight className="h-4 w-4 text-accent transition-transform group-hover:translate-x-1" />
           </Link>
           <div className="mt-6 space-y-3 text-sm text-white/70">
-            <a href={`tel:${SITE.phoneHref}`} className="flex min-h-8 items-center gap-3 hover:text-white">
+            <a
+              href={`tel:${SITE.phoneHref}`}
+              className="flex min-h-8 items-center gap-3 hover:text-white"
+            >
               <Phone className="h-4 w-4" />
               {SITE.phoneDisplay}
             </a>
@@ -82,26 +86,48 @@ export function SiteFooter() {
             <h2 className="font-display text-base font-bold uppercase tracking-tight text-white">
               Payments we support
             </h2>
-            <p className="mt-1 text-xs text-white/55">Available payment methods are confirmed at secure checkout.</p>
+            <p className="mt-1 text-xs text-white/55">
+              Available payment methods are confirmed at secure checkout.
+            </p>
           </div>
           <PaymentMarks />
         </div>
       </div>
-      <div className="border-t border-white/10 px-4 py-5 text-center font-mono text-[10px] uppercase tracking-[0.22em] text-white/70">
-        Spares Automation
+      <div className="border-t border-white/10 px-4 py-5 font-mono text-[10px] uppercase tracking-[0.22em] text-white/70">
+        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-center gap-x-5 gap-y-3 md:justify-between">
+          <span>Spares Automation</span>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("open-cookie-preferences"))}
+            className="underline decoration-white/30 underline-offset-4 transition-colors hover:text-white"
+          >
+            Cookie settings
+          </button>
+        </div>
       </div>
     </footer>
   );
 }
 
-function FooterColumn({ title, links }: { title: string; links: Array<{ label: string; to: string }> }) {
+function FooterColumn({
+  title,
+  links,
+}: {
+  title: string;
+  links: Array<{ label: string; to: string }>;
+}) {
   return (
     <div>
-      <h2 className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/70">{title}</h2>
+      <h2 className="font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-white underline decoration-2 decoration-accent underline-offset-8">
+        {title}
+      </h2>
       <ul className="mt-5 space-y-3">
         {links.map((link) => (
           <li key={link.label}>
-            <Link to={link.to} className="inline-flex min-h-8 items-center text-sm text-white/70 transition-colors hover:text-white">
+            <Link
+              to={link.to}
+              className="inline-flex min-h-8 items-center text-sm text-white/70 transition-colors hover:text-white"
+            >
               {link.label}
             </Link>
           </li>

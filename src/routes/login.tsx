@@ -6,10 +6,15 @@ import { z } from "zod";
 import { SiteHeader } from "@/components/shopify/SiteHeader";
 import { loginShopifyCustomer } from "@/lib/api/shopify.functions";
 
-const ALLOWED_REDIRECTS = ["/account", "/track-order", "/returns-policy", "/quote"] as const;
+const ALLOWED_REDIRECTS = ["/account", "/track-order", "/returns", "/quote"] as const;
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Sign In | Spares Automation" }, { name: "robots", content: "noindex, follow" }] }),
+  head: () => ({
+    meta: [
+      { title: "Sign In | Spares Automation" },
+      { name: "robots", content: "noindex, follow" },
+    ],
+  }),
   validateSearch: z.object({
     redirect: z.enum(ALLOWED_REDIRECTS).optional(),
   }),
@@ -55,15 +60,12 @@ function LoginPage() {
         status: "success",
         message: "You have successfully signed in!",
       });
-      
+
       setTimeout(() => navigate({ to: redirect ?? "/account" }), 1000);
     } catch (error) {
       setResult({
         status: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "We could not sign you in.",
+        message: error instanceof Error ? error.message : "We could not sign you in.",
       });
     } finally {
       setBusy(false);
@@ -74,7 +76,10 @@ function LoginPage() {
     <div className="min-h-screen bg-background text-ink">
       <SiteHeader />
 
-      <main id="main-content" className="mx-auto grid max-w-[1180px] gap-6 px-4 py-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-8 lg:px-6 lg:py-12">
+      <main
+        id="main-content"
+        className="mx-auto grid max-w-[1180px] gap-6 px-4 py-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-8 lg:px-6 lg:py-12"
+      >
         <section className="flex min-h-[400px] md:min-h-[520px] flex-col justify-between border border-rule bg-charcoal p-6 text-white md:p-8 lg:p-10">
           <div>
             <Link
@@ -142,11 +147,19 @@ function LoginPage() {
             </button>
 
             <p className="text-sm text-ink-muted">
-              <Link to="/forgot-password" className="font-semibold text-ink transition-colors hover:text-accent">Forgot your password?</Link>
+              <Link
+                to="/forgot-password"
+                className="font-semibold text-ink transition-colors hover:text-accent"
+              >
+                Forgot your password?
+              </Link>
             </p>
             <p className="text-sm text-ink-muted">
               Don't have an account?{" "}
-              <Link to="/register" className="font-semibold text-ink transition-colors hover:text-accent">
+              <Link
+                to="/register"
+                className="font-semibold text-ink transition-colors hover:text-accent"
+              >
                 Register
               </Link>
             </p>
@@ -270,9 +283,7 @@ function PasswordField({
               />
             ))}
           </div>
-          <div className="text-xs text-ink-muted mt-1">
-            {getStrengthLabel(strength)}
-          </div>
+          <div className="text-xs text-ink-muted mt-1">{getStrengthLabel(strength)}</div>
         </div>
       )}
     </label>

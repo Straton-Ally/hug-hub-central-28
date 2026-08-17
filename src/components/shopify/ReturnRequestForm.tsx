@@ -104,9 +104,7 @@ export function ReturnRequestForm() {
   }
 
   function updateItem(key: string, patch: Partial<ReturnItem>) {
-    setItems((current) =>
-      current.map((item) => (item.key === key ? { ...item, ...patch } : item)),
-    );
+    setItems((current) => current.map((item) => (item.key === key ? { ...item, ...patch } : item)));
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -155,7 +153,10 @@ export function ReturnRequestForm() {
         return;
       }
       setReference(result.reference);
-      window.scrollTo({ top: document.getElementById("return-request")?.offsetTop ?? 0, behavior: "smooth" });
+      window.scrollTo({
+        top: document.getElementById("return-request")?.offsetTop ?? 0,
+        behavior: "smooth",
+      });
     } catch {
       setError("We could not submit the return request. Please try again.");
     } finally {
@@ -165,7 +166,10 @@ export function ReturnRequestForm() {
 
   if (accountLoading) {
     return (
-      <section id="return-request" className="flex items-center gap-2 border border-rule bg-surface px-4 py-12 font-mono text-[10px] uppercase tracking-[0.25em] text-ink-muted md:px-8 md:py-16">
+      <section
+        id="return-request"
+        className="flex items-center gap-2 border border-rule bg-surface px-4 py-12 font-mono text-[10px] uppercase tracking-[0.25em] text-ink-muted md:px-8 md:py-16"
+      >
         <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> Checking your account
       </section>
     );
@@ -175,7 +179,7 @@ export function ReturnRequestForm() {
     return (
       <div id="return-request">
         <SignInRequired
-          redirect="/returns-policy"
+          redirect="/returns"
           title="Sign in to start a return"
           description="Returns are linked to your account and orders. Sign in to pick the order and items you want to return."
         />
@@ -203,13 +207,20 @@ export function ReturnRequestForm() {
   }
 
   return (
-    <section id="return-request" aria-labelledby="return-request-title" className="border border-rule bg-surface">
+    <section
+      id="return-request"
+      aria-labelledby="return-request-title"
+      className="border border-rule bg-surface"
+    >
       <div className="grid border-b border-rule bg-ink p-6 text-white md:grid-cols-[1fr_auto] md:items-end md:p-8">
         <div>
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-accent">
             Online returns
           </p>
-          <h2 id="return-request-title" className="mt-3 font-display text-2xl font-extrabold uppercase tracking-tight md:text-3xl">
+          <h2
+            id="return-request-title"
+            className="mt-3 font-display text-2xl font-extrabold uppercase tracking-tight md:text-3xl"
+          >
             Request a return
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70">
@@ -227,7 +238,9 @@ export function ReturnRequestForm() {
           </legend>
           {customer.orders.length ? (
             <label className="grid gap-2">
-              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Select an order *</span>
+              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">
+                Select an order *
+              </span>
               <select
                 value={orderNumber}
                 onChange={(event) => chooseOrder(event.target.value)}
@@ -237,7 +250,10 @@ export function ReturnRequestForm() {
                 <option value="">Select an order to return</option>
                 {customer.orders.map((order) => (
                   <option key={order.id} value={order.name}>
-                    {order.name} · {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(order.processedAt))}
+                    {order.name} ·{" "}
+                    {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
+                      new Date(order.processedAt),
+                    )}
                   </option>
                 ))}
               </select>
@@ -280,19 +296,27 @@ export function ReturnRequestForm() {
                 {item.selected ? (
                   <div className="grid gap-4 md:grid-cols-[1fr_140px]">
                     <label className="grid gap-2">
-                      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Reason for return *</span>
+                      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">
+                        Reason for return *
+                      </span>
                       <select
                         value={item.reason}
-                        onChange={(event) => updateItem(item.key, { reason: event.target.value as ReturnReason })}
+                        onChange={(event) =>
+                          updateItem(item.key, { reason: event.target.value as ReturnReason })
+                        }
                         className="h-12 border border-rule bg-surface px-4 text-sm outline-none focus:border-accent"
                       >
                         {REASONS.map((reason) => (
-                          <option key={reason.value} value={reason.value}>{reason.label}</option>
+                          <option key={reason.value} value={reason.value}>
+                            {reason.label}
+                          </option>
                         ))}
                       </select>
                     </label>
                     <label className="grid gap-2">
-                      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Quantity *</span>
+                      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">
+                        Quantity *
+                      </span>
                       <input
                         type="number"
                         min={1}
@@ -311,7 +335,9 @@ export function ReturnRequestForm() {
                       />
                     </label>
                     <label className="grid gap-2 md:col-span-2">
-                      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">What happened? (optional)</span>
+                      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">
+                        What happened? (optional)
+                      </span>
                       <textarea
                         rows={2}
                         value={item.details}
@@ -332,24 +358,57 @@ export function ReturnRequestForm() {
             3. Contact and resolution
           </legend>
           <label className="grid gap-2">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Contact name *</span>
-            <input name="contactName" required defaultValue={customer.displayName ?? ""} className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent" />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">
+              Contact name *
+            </span>
+            <input
+              name="contactName"
+              required
+              defaultValue={customer.displayName ?? ""}
+              className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent"
+            />
           </label>
           <label className="grid gap-2">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Email address *</span>
-            <input name="email" type="email" required defaultValue={customer.email ?? ""} className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent" />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">
+              Email address *
+            </span>
+            <input
+              name="email"
+              type="email"
+              required
+              defaultValue={customer.email ?? ""}
+              className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent"
+            />
           </label>
           <label className="grid gap-2">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Phone number</span>
-            <input name="phone" type="tel" defaultValue={customer.phone ?? ""} className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent" />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">
+              Phone number
+            </span>
+            <input
+              name="phone"
+              type="tel"
+              defaultValue={customer.phone ?? ""}
+              className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent"
+            />
           </label>
           <label className="grid gap-2">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Company</span>
-            <input name="company" className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent" />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">
+              Company
+            </span>
+            <input
+              name="company"
+              className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent"
+            />
           </label>
           <label className="grid gap-2 md:col-span-2">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Preferred outcome *</span>
-            <select name="resolution" required className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">
+              Preferred outcome *
+            </span>
+            <select
+              name="resolution"
+              required
+              className="h-12 border border-rule bg-background px-4 text-sm outline-none focus:border-accent"
+            >
               <option value="refund">Refund</option>
               <option value="replacement">Replacement</option>
               <option value="repair">Repair</option>
@@ -357,28 +416,50 @@ export function ReturnRequestForm() {
             </select>
           </label>
           <label className="grid gap-2 md:col-span-2">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Collection address (if collection may be required)</span>
-            <textarea name="collectionAddress" rows={3} className="resize-y border border-rule bg-background px-4 py-3 text-sm outline-none focus:border-accent" />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">
+              Collection address (if collection may be required)
+            </span>
+            <textarea
+              name="collectionAddress"
+              rows={3}
+              className="resize-y border border-rule bg-background px-4 py-3 text-sm outline-none focus:border-accent"
+            />
           </label>
           <label className="grid gap-2 md:col-span-2">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Additional notes</span>
-            <textarea name="notes" rows={3} className="resize-y border border-rule bg-background px-4 py-3 text-sm outline-none focus:border-accent" />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">
+              Additional notes
+            </span>
+            <textarea
+              name="notes"
+              rows={3}
+              className="resize-y border border-rule bg-background px-4 py-3 text-sm outline-none focus:border-accent"
+            />
           </label>
           <label className="hidden" aria-hidden="true">
-            Website<input name="website" tabIndex={-1} autoComplete="off" />
+            Website
+            <input name="website" tabIndex={-1} autoComplete="off" />
           </label>
         </fieldset>
 
         <div className="border border-amber/40 bg-amber/10 p-4 text-sm leading-6 text-ink-muted">
           Submitting this form requests a return; it does not approve one. Keep the item and its
-          packaging until the team emails return instructions. Your statutory rights are not affected.
+          packaging until the team emails return instructions. Your statutory rights are not
+          affected.
         </div>
-        {error ? <p role="alert" className="border border-red-300 bg-red-50 p-4 text-sm text-red-800">{error}</p> : null}
+        {error ? (
+          <p role="alert" className="border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+            {error}
+          </p>
+        ) : null}
         <button
           disabled={busy}
           className="inline-flex h-13 items-center justify-center gap-2 bg-accent px-6 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-white hover:brightness-110 disabled:opacity-60"
         >
-          {busy ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : <RotateCcw aria-hidden="true" className="h-4 w-4" />}
+          {busy ? (
+            <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+          ) : (
+            <RotateCcw aria-hidden="true" className="h-4 w-4" />
+          )}
           {busy ? "Submitting return" : "Submit return request"}
         </button>
       </form>

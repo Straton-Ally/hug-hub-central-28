@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SITE } from "../lib/site";
+import { CookieConsent } from "../components/shopify/CookieConsent";
 
 function NotFoundComponent() {
   return (
@@ -85,10 +86,16 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Spares Automation" },
-      { name: "description", content: "Industrial parts, automation spares, trade quotes, and product support." },
+      {
+        name: "description",
+        content: "Industrial parts, automation spares, trade quotes, and product support.",
+      },
       { name: "author", content: "Spares Automation" },
       { property: "og:title", content: "Spares Automation" },
-      { property: "og:description", content: "Industrial parts, automation spares, trade quotes, and product support." },
+      {
+        property: "og:description",
+        content: "Industrial parts, automation spares, trade quotes, and product support.",
+      },
       { property: "og:type", content: "website" },
       { property: "og:url", content: SITE.url },
       { name: "twitter:card", content: "summary" },
@@ -96,7 +103,11 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", type: "image/svg+xml", href: `data:image/svg+xml;utf8,${encodeURIComponent(FAVICON_SVG)}` },
+      {
+        rel: "icon",
+        type: "image/svg+xml",
+        href: `data:image/svg+xml;utf8,${encodeURIComponent(FAVICON_SVG)}`,
+      },
       { rel: "manifest", href: "/site.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -152,5 +163,10 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      <CookieConsent />
+    </>
+  );
 }

@@ -85,6 +85,24 @@ test("registration form stays inside a 320px phone viewport", async ({ page }) =
   expect(outsideControls).toEqual([]);
 });
 
+test("registration requires acceptance of the legal terms", async ({ page }) => {
+  await page.goto("/register");
+
+  const consent = page.getByRole("checkbox", {
+    name: /I agree to the Terms & Conditions and acknowledge the Privacy Policy/i,
+  });
+  await expect(consent).toBeVisible();
+  await expect(consent).toHaveAttribute("required", "");
+  await expect(page.getByRole("link", { name: "Terms & Conditions" })).toHaveAttribute(
+    "href",
+    "/terms-and-conditions",
+  );
+  await expect(page.getByRole("link", { name: "Privacy Policy" })).toHaveAttribute(
+    "href",
+    "/privacy-policy",
+  );
+});
+
 test("touch tablets keep homepage category choices visible", async ({ browser, isMobile }) => {
   test.skip(isMobile, "Runs once with an explicit touch-tablet context");
   const context = await browser.newContext({ viewport: { width: 1024, height: 768 }, hasTouch: true });

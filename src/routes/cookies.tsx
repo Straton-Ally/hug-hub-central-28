@@ -4,7 +4,12 @@ import { InfoPage } from "@/components/shopify/InfoPage";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/cookies")({
-  head: () => pageHead("Cookie Information", "How essential cookies and browser storage support cart, account, and checkout functionality.", "/cookies"),
+  head: () =>
+    pageHead(
+      "Cookie Policy",
+      "How essential cookies and browser storage support cart, account, and checkout functionality.",
+      "/cookies",
+    ),
   component: CookiesPage,
 });
 
@@ -12,7 +17,7 @@ function CookiesPage() {
   return (
     <InfoPage
       eyebrow="Help"
-      title="Use of cookies"
+      title="Cookie policy"
       intro="Cookies and local browser storage support core shopping functions such as cart persistence, login state, and site operation."
       sections={[
         {
