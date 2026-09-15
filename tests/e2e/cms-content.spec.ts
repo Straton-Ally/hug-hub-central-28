@@ -1,0 +1,573 @@
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+
+import { expect, test, type Page } from "@playwright/test";
+import postgres from "postgres";
+
+import { hashPassword } from "../../src/lib/admin/auth.server";
+
+function localEnvironment(): Record<string, string> {
+  const envPath = path.resolve(process.cwd(), ".env");
+  if (!existsSync(envPath)) return {};
+  return Object.fromEntries(
+    readFileSync(envPath, "utf8")
+      .split(/\r?\n/)
+      .filter((line) => line && !line.trimStart().startsWith("#") && line.includes("="))
+      .map((line) => {
+        const separator = line.indexOf("=");
+        return [line.slice(0, separator), line.slice(separator + 1)];
+      }),
+  );
+}
+
+const fileEnv = localEnvironment();
+const environment = {
+  databaseUrl: process.env.DATABASE_URL || fileEnv.DATABASE_URL,
+  adminEmail: process.env.ADMIN_SEED_EMAIL || fileEnv.ADMIN_SEED_EMAIL,
+  adminPassword: process.env.ADMIN_SEED_PASSWORD || fileEnv.ADMIN_SEED_PASSWORD,
+};
+const configured = Boolean(
+  environment.databaseUrl && environment.adminEmail && environment.adminPassword,
+);
+
+const TINY_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64",
+);
+
+function database() {
+  return postgres(environment.databaseUrl!, { max: 1, prepare: false });
+}
+
+let reachable: Promise<boolean> | null = null;
+
+/** The CMS database is optional locally, so integration tests skip when it is down. */
+function databaseReachable() {
+  if (!configured) return Promise.resolve(false);
+  reachable ??= (async () => {
+    const sql = postgres(environment.databaseUrl!, {
+      max: 1,
+      prepare: false,
+      connect_timeout: 5,
+    });
+    try {
+      await sql`select 1`;
+      return true;
+    } catch {
+      return false;
+    } finally {
+      await sql.end({ timeout: 2 }).catch(() => undefined);
+    }
+  })();
+  return reachable;
+}
+
+async function signIn(page: Page, email: string, password: string) {
+  await page.goto("/admin/login");
+  await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+}
+
+test("public pages render their compiled content without an admin session", async ({ page }) => {
+  test.slow();
+  await page.goto("/disclaimer");
+  await expect(page.getByRole("heading", { level: 1, name: "Disclaimer" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Compatibility" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Third-party names" })).toBeVisible();
+
+  await page.goto("/got-a-question");
+  await expect(page.getByRole("heading", { level: 1, name: "Got a question?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Product questions" })).toBeVisible();
+
+  await page.goto("/cart");
+  await expect(page.getByRole("heading", { level: 1, name: "Cart" })).toBeVisible();
+});
+
+test("CMS-driven public pages keep their landmarks and heading structure", async ({ page }) => {
+  test.slow();
+  for (const target of [
+    "/disclaimer",
+    "/delivery-information",
+    "/returns",
+    "/got-a-question",
+    "/about-us",
+    "/contact-us",
+    "/resources",
+    "/cookies",
+  ]) {
+    await page.goto(target);
+    await expect(page.getByRole("link", { name: "Skip to main content" }), target).toBeAttached();
+    await expect(page.getByRole("banner"), target).toBeVisible();
+    await expect(page.locator("main#main-content"), target).toBeVisible();
+    await expect(page.locator("h1"), target).toHaveCount(1);
+    const unlabelledImages = await page
+      .locator("main img:not([alt])")
+      .count();
+    expect(unlabelledImages, target).toBe(0);
+  }
+});
+
+test("unauthenticated visitors cannot reach CMS screens, drafts or previews", async ({ page }) => {
+  test.slow();
+  for (const target of ["/admin/content", "/admin/media", "/admin/users", "/admin/content/site/preview"]) {
+    // A server-side redirect can abort the navigation request; the resulting URL is what matters.
+    await page.goto(target).catch(() => undefined);
+    await expect(page, target).toHaveURL(/\/admin\/login/, { timeout: 20_000 });
+  }
+});
+
+test("every CMS-wired route renders without a client error", async ({ page }) => {
+  // Fifteen server-rendered routes, each hitting Shopify or Postgres.
+  test.setTimeout(240_000);
+  const failures: string[] = [];
+  page.on("pageerror", (error) => failures.push(`${page.url()}: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") failures.push(`${page.url()}: ${message.text()}`);
+  });
+
+  for (const target of [
+    "/",
+    "/products",
+    "/search?q=valve",
+    "/cart",
+    "/quote",
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/account",
+    "/track-order",
+    "/credit-account",
+    "/resources",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/site.webmanifest",
+  ]) {
+    // Catalogue routes call Shopify, which can blip; one retry keeps the check honest.
+    let response = await page.goto(target);
+    if ((response?.status() ?? 500) >= 500) response = await page.goto(target);
+    expect(response?.status(), target).toBeLessThan(400);
+  }
+
+  // Shopify or database outages are logged on the server, not surfaced to visitors.
+  expect(failures.filter((entry) => !/favicon|net::ERR/i.test(entry))).toEqual([]);
+});
+
+
+test("the CMS sign-in screen uses the admin design system", async ({ page }) => {
+  await page.goto("/admin/login");
+  await expect(page.getByRole("heading", { level: 1, name: "Sign in to the CMS" })).toBeVisible();
+  await expect(page.getByLabel("Email address")).toBeVisible();
+  await expect(page.getByLabel("Password")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+  // The admin theme is applied before paint; its absence means the CMS
+  // stylesheet did not load and the storefront theme is showing through.
+  await expect(page.locator("html")).toHaveAttribute("data-cms-theme", /^(light|dark)$/);
+});
+
+test.describe("CMS dashboard", () => {
+  test.describe.configure({ mode: "serial" });
+
+  test("the sidebar reaches every area of the platform", async ({ page }, testInfo) => {
+    test.skip(!(await databaseReachable()), "CMS database is not reachable");
+    test.skip(testInfo.project.name !== "desktop-chromium", "Dashboard checks run once per suite");
+
+    await signIn(page, environment.adminEmail!, environment.adminPassword!);
+    await expect(page).toHaveURL(/\/admin$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Overview" })).toBeVisible();
+
+    const sidebar = page.getByTestId("cms-sidebar");
+    for (const label of [
+      "Dashboard",
+      "Submissions",
+      "Content",
+      "Media",
+      "Users",
+      "Activity",
+      "Settings",
+    ]) {
+      await expect(sidebar.getByText(label, { exact: true }).first(), label).toBeVisible();
+    }
+
+    // Every content document is reachable from the sidebar.
+    await sidebar.getByText("Business details", { exact: true }).click();
+    await expect(page).toHaveURL(/\/admin\/content\/site$/);
+    await expect(page.getByRole("button", { name: "Save draft" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Publish" })).toBeVisible();
+
+    await sidebar.getByText("Media", { exact: true }).click();
+    await expect(page).toHaveURL(/\/admin\/media$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Media" })).toBeVisible();
+
+    await sidebar.getByText("Activity", { exact: true }).click();
+    await expect(page).toHaveURL(/\/admin\/activity/);
+    await expect(page.getByRole("heading", { level: 1, name: "Activity log" })).toBeVisible();
+
+    // Signing out must be reachable without opening a menu.
+    await expect(sidebar.getByRole("button", { name: "Sign out" })).toBeVisible();
+
+    await sidebar.getByRole("link", { name: "Settings" }).click();
+    await expect(page).toHaveURL(/\/admin\/settings$/);
+    await expect(page.getByRole("heading", { name: "Business details" })).toBeVisible();
+    await page.getByRole("tab", { name: "Navigation" }).click();
+    await expect(page.getByRole("heading", { name: "Navigation and footer" })).toBeVisible();
+
+    await sidebar.getByText("Submissions", { exact: true }).click();
+    await expect(page).toHaveURL(/\/admin\/submissions/);
+    await expect(page.getByRole("heading", { level: 1, name: "Submissions" })).toBeVisible();
+  });
+});
+
+
+test("editing markers never reach anonymous visitors", async ({ page }) => {
+  await page.goto("/?cmsEdit=1");
+  await expect(page.getByRole("heading", { level: 2, name: /Asphalt/i }).first()).toBeVisible();
+  expect(await page.locator("[data-cms-field]").count()).toBe(0);
+});
+
+test.describe("Visual page editor", () => {
+  test.describe.configure({ mode: "serial" });
+
+  test("click-to-edit changes wording on the page", async ({ page }, testInfo) => {
+    test.skip(!(await databaseReachable()), "CMS database is not reachable");
+    test.skip(testInfo.project.name !== "desktop-chromium", "Content mutations run once per suite");
+    test.setTimeout(180_000);
+
+    const sql = database();
+    // The frame must become interactive: the loading overlay has to clear and
+    // the page inside has to carry editing markers.
+    const [original] = await sql<
+      { draft_data: Record<string, never>; published_data: Record<string, never>; draft_version: number; published_version: number }[]
+    >`
+      select draft_data, published_data, draft_version, published_version
+      from content_documents where key = 'catalogue'
+    `;
+
+    try {
+      await signIn(page, environment.adminEmail!, environment.adminPassword!);
+      await page.goto("/admin/visual?page=%2F&width=desktop");
+      await expect(page.getByRole("heading", { level: 1, name: "Edit pages" })).toBeVisible();
+      await expect(page.getByText("Loading page…")).toBeHidden({ timeout: 30_000 });
+
+      // The rendered page carries editing markers for staff.
+      const frame = page.frameLocator('iframe[title="Page being edited"]');
+      const target = frame.locator('[data-cms-field="catalogue.ranges.0.lines.0.label"]');
+      await expect(target).toBeVisible({ timeout: 30_000 });
+      await expect(target).toHaveText("Aggregate feeding");
+
+      await target.click();
+      await expect(page.getByRole("heading", { name: "Product line name" })).toBeVisible();
+
+      const field = page.getByLabel("Line label");
+      await field.fill("Aggregate feeding systems");
+      await page.getByRole("button", { name: /^Save/ }).first().click();
+      await expect(page.getByText("Changes saved to the draft")).toBeVisible({ timeout: 15_000 });
+
+      // The preview reflects the saved draft.
+      await expect(
+        page
+          .frameLocator('iframe[title="Page being edited"]')
+          .locator('[data-cms-field="catalogue.ranges.0.lines.0.label"]'),
+      ).toHaveText("Aggregate feeding systems", { timeout: 30_000 });
+
+      // Visitors still see the published wording until it is published.
+      const anonymous = await page.context().browser()!.newContext();
+      const visitor = await anonymous.newPage();
+      await visitor.goto("/");
+      await expect(visitor.getByText("Aggregate feeding", { exact: true }).first()).toBeVisible();
+      await anonymous.close();
+    } finally {
+      await sql`
+        update content_documents
+        set draft_data = ${sql.json(original.draft_data)},
+            published_data = ${sql.json(original.published_data)},
+            draft_version = ${original.draft_version},
+            published_version = ${original.published_version}
+        where key = 'catalogue'
+      `.catch(() => undefined);
+      await sql.end({ timeout: 2 });
+    }
+  });
+});
+
+test.describe("CMS content workflow", () => {
+  test.describe.configure({ mode: "serial" });
+
+  test("draft, preview, publish and restore run end to end", async ({ page }, testInfo) => {
+    test.skip(!(await databaseReachable()), "CMS database is not reachable");
+    test.skip(testInfo.project.name !== "desktop-chromium", "Content mutations run once per suite");
+
+    const sql = database();
+    const editedTitle = `Disclaimer ${Date.now()}`;
+    const [original] = await sql<
+      { draft_data: Record<string, never>; published_data: Record<string, never>; draft_version: number; published_version: number }[]
+    >`select draft_data, published_data, draft_version, published_version from content_documents where key = 'pages'`;
+    expect(original, "the pages document must be seeded").toBeTruthy();
+
+    try {
+      await signIn(page, environment.adminEmail!, environment.adminPassword!);
+      await page.goto("/admin/content");
+      await expect(page.getByRole("heading", { name: "Functional pages" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Catalogue presentation" })).toBeVisible();
+
+      await page.getByRole("link", { name: "Information and legal pages" }).click();
+      await expect(page).toHaveURL(/\/admin\/content\/pages$/);
+
+      // Another editor saves a change while this editor holds an older version.
+      const draft = structuredClone(original.draft_data) as Record<string, { title: string }>;
+      draft.disclaimer.title = editedTitle;
+      await sql`
+        update content_documents
+        set draft_data = ${sql.json(draft)}, draft_version = draft_version + 1
+        where key = 'pages'
+      `;
+
+      await page.getByRole("button", { name: "Save draft" }).click();
+      await expect(page.getByRole("alert")).toContainText("changed since you opened it");
+
+      // Draft changes are invisible to the public site until published.
+      await page.goto("/disclaimer");
+      await expect(page.getByRole("heading", { level: 1, name: "Disclaimer" })).toBeVisible();
+
+      // The authenticated preview renders the draft through the public renderer.
+      await page.goto("/admin/content/pages/preview?raw=true&page=disclaimer");
+      await expect(page.getByRole("heading", { level: 1, name: editedTitle })).toBeVisible();
+
+      await page.goto("/admin/content/pages");
+      await page.getByRole("button", { name: "Publish" }).click();
+      await expect(page.getByRole("status")).toContainText("Published version");
+
+      await page.goto("/disclaimer");
+      await expect(page.getByRole("heading", { level: 1, name: editedTitle })).toBeVisible();
+
+      const revisions = await sql<{ version: number }[]>`
+        select version from content_revisions where document_key = 'pages' order by version desc
+      `;
+      expect(revisions.length).toBeGreaterThan(1);
+
+      // Restoring an older revision changes the draft only.
+      await page.goto("/admin/content/pages");
+      page.once("dialog", (dialog) => dialog.accept());
+      await page
+        .locator("aside")
+        .getByRole("button", { name: "Restore to draft" })
+        .last()
+        .click();
+      await expect(page.getByText(/Draft v\d+ · Live v\d+/)).toBeVisible();
+
+      await page.goto("/disclaimer");
+      await expect(page.getByRole("heading", { level: 1, name: editedTitle })).toBeVisible();
+
+      await page.goto("/admin/content/pages");
+      await page.getByRole("button", { name: "Publish" }).click();
+      await expect(page.getByRole("status")).toContainText("Published version");
+
+      await page.goto("/disclaimer");
+      await expect(page.getByRole("heading", { level: 1, name: "Disclaimer" })).toBeVisible();
+    } finally {
+      await sql`
+        delete from content_revisions
+        where document_key = 'pages' and version > ${original.published_version}
+      `.catch(() => undefined);
+      await sql`
+        update content_documents
+        set draft_data = ${sql.json(original.draft_data)},
+            published_data = ${sql.json(original.published_data)},
+            draft_version = ${original.draft_version},
+            published_version = ${original.published_version}
+        where key = 'pages'
+      `.catch(() => undefined);
+      await sql.end({ timeout: 2 });
+    }
+  });
+
+  test("uploaded media stays private, resists deletion while referenced, then deletes", async ({
+    page,
+  }, testInfo) => {
+    test.skip(!(await databaseReachable()), "CMS database is not reachable");
+    test.skip(testInfo.project.name !== "desktop-chromium", "Content mutations run once per suite");
+
+    const sql = database();
+    const alt = `E2E media ${Date.now()}`;
+    let mediaId = "";
+    const [original] = await sql<{ draft_data: Record<string, never>; draft_version: number }[]>`
+      select draft_data, draft_version from content_documents where key = 'pages'
+    `;
+
+    try {
+      await signIn(page, environment.adminEmail!, environment.adminPassword!);
+      await page.goto("/admin/media");
+      await page.getByRole("button", { name: "Upload", exact: true }).first().click();
+      await page.locator('input[name="file"]').setInputFiles({
+        name: "e2e-content-image.png",
+        mimeType: "image/png",
+        buffer: TINY_PNG,
+      });
+      await page.locator('input[name="defaultAlt"]').fill(alt);
+      await page.getByRole("button", { name: "Upload" }).click();
+      await expect(page.getByRole("status")).toContainText("remains private");
+
+      const card = page.locator("article", { hasText: alt });
+      await expect(card).toContainText("Draft only");
+      const [uploaded] = await sql<{ id: string }[]>`
+        select id from content_media where default_alt = ${alt} order by created_at desc limit 1
+      `;
+      mediaId = uploaded?.id ?? "";
+      expect(mediaId).toMatch(/^[a-f0-9]{32}$/);
+
+      // Unpublished media is not served to anonymous visitors.
+      const anonymous = await page.context().browser()!.newContext();
+      const response = await anonymous.request.get(
+        `/content-media/${mediaId}/e2e-content-image.png`,
+        { failOnStatusCode: false },
+      );
+      expect(response.status()).toBe(404);
+      await anonymous.close();
+
+      // Referenced images cannot be deleted.
+      const draft = structuredClone(original.draft_data) as Record<
+        string,
+        { blocks: Array<Record<string, string>> }
+      >;
+      draft.disclaimer.blocks.push({ type: "media", mediaId, mediaAlt: alt, caption: "" });
+      await sql`
+        update content_documents
+        set draft_data = ${sql.json(draft)}, draft_version = draft_version + 1
+        where key = 'pages'
+      `;
+
+      await page.goto("/admin/media");
+      await page.locator("article", { hasText: alt }).getByRole("button", { name: /Actions for/ }).click();
+      page.once("dialog", (dialog) => dialog.accept());
+      await page.getByRole("menuitem", { name: "Delete" }).click();
+      await expect(page.getByRole("alert")).toContainText("referenced by draft or published content");
+
+      await sql`
+        update content_documents
+        set draft_data = ${sql.json(original.draft_data)}, draft_version = ${original.draft_version}
+        where key = 'pages'
+      `;
+
+      await page.goto("/admin/media");
+      await page.locator("article", { hasText: alt }).getByRole("button", { name: /Actions for/ }).click();
+      page.once("dialog", (dialog) => dialog.accept());
+      await page.getByRole("menuitem", { name: "Delete" }).click();
+      await expect(page.locator("article", { hasText: alt })).toHaveCount(0);
+
+      const remaining = await sql<{ id: string }[]>`
+        select id from content_media where id = ${mediaId}
+      `;
+      expect(remaining).toHaveLength(0);
+    } finally {
+      await sql`
+        update content_documents
+        set draft_data = ${sql.json(original.draft_data)}, draft_version = ${original.draft_version}
+        where key = 'pages'
+      `.catch(() => undefined);
+      if (mediaId) await sql`delete from content_media where id = ${mediaId}`.catch(() => undefined);
+      await sql.end({ timeout: 2 });
+    }
+  });
+
+  test("staff accounts can edit drafts but cannot publish or manage users", async ({
+    page,
+  }, testInfo) => {
+    test.skip(!(await databaseReachable()), "CMS database is not reachable");
+    test.skip(testInfo.project.name !== "desktop-chromium", "Content mutations run once per suite");
+
+    const sql = database();
+    const email = `e2e-staff-${Date.now()}@example.com`;
+    const password = "StaffTemporary123";
+
+    try {
+      await sql`
+        insert into staff_users (email, password_hash, name, role, must_change_password)
+        values (${email}, ${await hashPassword(password)}, 'E2E Staff', 'staff', true)
+      `;
+
+      // A temporary password forces a change before any CMS screen opens.
+      await signIn(page, email, password);
+      await expect(page).toHaveURL(/\/admin\/change-password$/);
+      await page.goto("/admin/content");
+      await expect(page).toHaveURL(/\/admin\/change-password$/);
+
+      await sql`update staff_users set must_change_password = false where email = ${email}`;
+      await signIn(page, email, password);
+      await page.goto("/admin/content/site");
+      await expect(page.getByRole("button", { name: "Save draft" })).toBeVisible();
+
+      // Every editor control keeps an accessible name for keyboard and screen-reader use.
+      const unnamedFields = await page.locator("main input:visible, main textarea:visible, main select:visible").evaluateAll(
+        (elements) =>
+          elements.filter((element) => {
+            const label = element.closest("label")?.textContent?.trim();
+            return !(label || element.getAttribute("aria-label") || element.getAttribute("title"));
+          }).length,
+      );
+      expect(unnamedFields).toBe(0);
+      await expect(page.getByRole("button", { name: "Publish" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Restore to draft" })).toHaveCount(0);
+
+      await page.goto("/admin/users");
+      await expect(page).not.toHaveURL(/\/admin\/users$/);
+      await expect(page.getByRole("button", { name: "Create" })).toHaveCount(0);
+
+      // Deactivating the account invalidates its live session immediately.
+      await signIn(page, environment.adminEmail!, environment.adminPassword!);
+      await page.goto("/admin/users");
+      const row = page.locator("form", { has: page.locator(`input[value="${email}"]`) });
+      await row.getByRole("checkbox").uncheck();
+      await row.getByRole("button", { name: "Save" }).click();
+      await expect(page.getByText("User updated.")).toBeVisible();
+
+      const [deactivated] = await sql<{ is_active: boolean; session_version: number }[]>`
+        select is_active, session_version from staff_users where email = ${email}
+      `;
+      expect(deactivated.is_active).toBe(false);
+      expect(deactivated.session_version).toBeGreaterThan(1);
+
+      await signIn(page, email, password);
+      await expect(page.getByRole("alert")).toContainText("Invalid email or password");
+    } finally {
+      await sql`delete from staff_users where email = ${email}`.catch(() => undefined);
+      await sql.end({ timeout: 2 });
+    }
+  });
+
+  test("administrators cannot deactivate themselves or remove the last administrator", async ({
+    page,
+  }, testInfo) => {
+    test.skip(!(await databaseReachable()), "CMS database is not reachable");
+    test.skip(testInfo.project.name !== "desktop-chromium", "Content mutations run once per suite");
+
+    const sql = database();
+    try {
+      const activeAdmins = await sql<{ email: string }[]>`
+        select email from staff_users where role = 'admin' and is_active = true
+      `;
+
+      await signIn(page, environment.adminEmail!, environment.adminPassword!);
+      await page.goto("/admin/users");
+      const own = page.locator("form", {
+        has: page.locator(`input[value="${environment.adminEmail!.toLowerCase()}"]`),
+      });
+      await own.getByRole("checkbox").uncheck();
+      await own.getByRole("button", { name: "Save" }).click();
+      await expect(page.getByRole("alert")).toContainText("cannot deactivate your own account");
+
+      if (activeAdmins.length === 1) {
+        await page.reload();
+        await own.getByRole("combobox").selectOption("staff");
+        await own.getByRole("button", { name: "Save" }).click();
+        await expect(page.getByRole("alert")).toContainText("final active administrator");
+      }
+
+      const [unchanged] = await sql<{ is_active: boolean; role: string }[]>`
+        select is_active, role from staff_users where email = ${environment.adminEmail!.toLowerCase()}
+      `;
+      expect(unchanged).toMatchObject({ is_active: true, role: "admin" });
+    } finally {
+      await sql.end({ timeout: 2 });
+    }
+  });
+});

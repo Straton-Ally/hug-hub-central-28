@@ -1,257 +1,266 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Inbox, Search } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
-
-import { AdminShell } from "@/components/admin/AdminShell";
 import {
-  getAdminSession,
-  listSubmissions,
-  type SubmissionListResult,
-} from "@/lib/admin/admin.functions";
+  Activity,
+  ArrowUpRight,
+  FileText,
+  Images,
+  Inbox,
+  MousePointerClick,
+  Send,
+  Users,
+} from "lucide-react";
 
-const TYPE_LABELS: Record<string, string> = {
-  part_inquiry: "Part inquiry",
-  credit_account: "Credit account",
-  return_request: "Return request",
-  support_tracking: "Order tracking",
-  support_resources: "Resource request",
-  support_question: "Product question",
-  unsubscribe: "Unsubscribe",
-};
+import { CmsShell } from "@/components/admin/CmsShell";
+import {
+  EmptyState,
+  formatDateTime,
+  formatRelative,
+  humaniseAction,
+  InitialsAvatar,
+  Notice,
+  Pill,
+  SectionCard,
+  Stat,
+  StatusPill,
+  SUBMISSION_TYPE_LABELS,
+} from "@/components/admin/ui";
+import { Button } from "@/components/ui/button";
+import { getAdminSession } from "@/lib/admin/admin.functions";
+import { getDashboard } from "@/lib/admin/dashboard.functions";
+import { cmsHead } from "@/lib/admin/head";
 
-const STATUS_LABELS: Record<string, string> = {
-  new: "New",
-  in_review: "In review",
-  approved: "Approved",
-  rejected: "Rejected",
-  completed: "Completed",
-};
-
-const STATUS_STYLES: Record<string, string> = {
-  new: "border-accent/40 bg-accent/10 text-accent",
-  in_review: "border-amber/40 bg-amber/10 text-amber",
-  approved: "border-green-500/40 bg-green-500/10 text-green-700",
-  rejected: "border-red-500/40 bg-red-500/10 text-red-700",
-  completed: "border-rule bg-surface text-ink-muted",
-};
-
-type AdminSearch = {
-  type: string;
-  status: string;
-  search: string;
-  page: number;
-};
+const SUBMISSION_SEARCH = { type: "all", status: "all", search: "", page: 1 } as const;
+const ACTIVITY_SEARCH = { page: 1, action: "" } as const;
 
 export const Route = createFileRoute("/admin/")({
-  head: () => ({
-    meta: [{ title: "Admin Dashboard | Spares Automation" }, { name: "robots", content: "noindex, nofollow" }],
-  }),
-  validateSearch: (search: Record<string, unknown>): AdminSearch => ({
-    type: typeof search.type === "string" ? search.type : "all",
-    status: typeof search.status === "string" ? search.status : "all",
-    search: typeof search.search === "string" ? search.search : "",
-    page: typeof search.page === "number" && search.page > 0 ? search.page : 1,
-  }),
+  head: () => cmsHead("Dashboard"),
   loader: async () => {
     const staff = await getAdminSession();
-    if (!staff) {
-      throw redirect({ to: "/admin/login" });
-    }
-    return { staff };
+    if (!staff) throw redirect({ to: "/admin/login" });
+    if (staff.mustChangePassword) throw redirect({ to: "/admin/change-password" });
+    return { staff, data: await getDashboard() };
   },
-  component: AdminDashboardPage,
+  component: OverviewPage,
 });
 
-function AdminDashboardPage() {
-  const { staff } = Route.useLoaderData();
-  const search = Route.useSearch();
-  const navigate = Route.useNavigate();
-  const [result, setResult] = useState<SubmissionListResult | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      setLoading(true);
-      setLoadError("");
-      try {
-        const res = await listSubmissions({
-          data: {
-            type: search.type === "all" ? undefined : (search.type as never),
-            status: search.status === "all" ? undefined : (search.status as never),
-            search: search.search || undefined,
-            page: search.page,
-          },
-        });
-        if (active) setResult(res);
-      } catch {
-        if (active) setLoadError("We could not load submissions.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-    void load();
-    return () => {
-      active = false;
-    };
-  }, [search.type, search.status, search.search, search.page]);
-
-  function applyFilters(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    void navigate({
-      to: "/admin",
-      search: {
-        type: String(form.get("type") ?? "all"),
-        status: String(form.get("status") ?? "all"),
-        search: String(form.get("search") ?? ""),
-        page: 1,
-      },
-    });
-  }
-
-  const items = result?.ok ? result.items : [];
+function OverviewPage() {
+  const { staff, data } = Route.useLoaderData();
+  const open = (data.submissions.byStatus.new ?? 0) + (data.submissions.byStatus.in_review ?? 0);
+  const firstName = staff.name.split(/\s+/)[0];
 
   return (
-    <AdminShell staff={staff} title="Submissions" eyebrow="Dashboard">
-      {result?.ok ? (
-        <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-5">
-          {Object.entries(STATUS_LABELS).map(([status, label]) => (
-            <div key={status} className="border border-rule bg-surface p-4">
-              <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-ink-muted">
-                {label}
-              </div>
-              <div className="mt-2 font-display text-2xl font-bold text-ink">
-                {result.counts[status as keyof typeof result.counts]}
-              </div>
-            </div>
-          ))}
+    <CmsShell
+      staff={staff}
+      title="Overview"
+      subtitle={`Welcome back, ${firstName}. Enquiries from the website, content waiting to publish, and the latest changes made in the CMS.`}
+      inboxCount={data.submissions.byStatus.new}
+      actions={
+        <>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/admin/content">
+              <FileText /> All content
+            </Link>
+          </Button>
+          <Button size="sm" asChild>
+            <Link to="/admin/visual" search={{ page: "/", width: "desktop" as const }}>
+              <MousePointerClick /> Edit website text
+            </Link>
+          </Button>
+        </>
+      }
+    >
+      {!data.ok ? (
+        <div className="mb-5">
+          <Notice tone="warning" title="Live figures are unavailable">
+            The CMS database could not be reached. The public website keeps serving its last
+            published content.
+          </Notice>
         </div>
       ) : null}
-      <form
-        onSubmit={applyFilters}
-        className="mb-5 grid gap-3 border border-rule bg-surface p-4 md:grid-cols-[1fr_180px_180px_auto]"
-      >
-        <label className="grid gap-1.5">
-          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-ink-muted">Search</span>
-          <div className="flex items-center border border-rule bg-background focus-within:border-accent">
-            <Search className="ml-3 h-4 w-4 text-ink-muted" />
-            <input
-              name="search"
-              defaultValue={search.search}
-              placeholder="Reference, email, name or company"
-              className="h-11 w-full bg-transparent px-3 text-sm text-ink outline-none placeholder:text-ink-muted"
-            />
-          </div>
-        </label>
-        <label className="grid gap-1.5">
-          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-ink-muted">Type</span>
-          <select name="type" defaultValue={search.type} className="h-11 border border-rule bg-background px-3 text-sm text-ink outline-none focus:border-accent">
-            <option value="all">All types</option>
-            {Object.entries(TYPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1.5">
-          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-ink-muted">Status</span>
-          <select name="status" defaultValue={search.status} className="h-11 border border-rule bg-background px-3 text-sm text-ink outline-none focus:border-accent">
-            <option value="all">All statuses</option>
-            {Object.entries(STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </label>
-        <div className="flex items-end">
-          <button type="submit" className="inline-flex h-11 items-center justify-center bg-accent px-6 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-white hover:brightness-110">
-            Apply
-          </button>
-        </div>
-      </form>
 
-      {loadError ? (
-        <div role="alert" className="border border-red-300 bg-red-50 p-4 text-sm text-red-800">{loadError}</div>
-      ) : loading ? (
-        <div className="border border-rule bg-surface px-4 py-16 text-center font-mono text-[10px] uppercase tracking-[0.25em] text-ink-muted">
-          Loading submissions
-        </div>
-      ) : items.length === 0 ? (
-        <div className="border border-rule bg-surface px-4 py-16 text-center">
-          <Inbox className="mx-auto h-8 w-8 text-ink-muted" />
-          <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-ink-muted">No submissions match these filters</p>
-        </div>
-      ) : (
-        <>
-          <div className="overflow-x-auto border border-rule bg-surface">
-            <table className="w-full min-w-[820px] text-left text-sm">
-              <thead className="border-b border-rule bg-background font-mono text-[9px] uppercase tracking-[0.16em] text-ink-muted">
-                <tr>
-                  <th className="px-4 py-3">Reference</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3">Contact</th>
-                  <th className="px-4 py-3">Company</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Received</th>
-                  <th className="px-4 py-3 text-right">Sync</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-rule">
-                {items.map((item) => (
-                  <tr key={item.id} className="transition-colors hover:bg-background">
-                    <td className="px-4 py-3">
-                      <Link to="/admin/submissions/$id" params={{ id: String(item.id) }} className="font-mono text-xs font-semibold text-ink hover:text-accent">
+      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <Stat
+          label="Open enquiries"
+          value={open}
+          hint={`${data.submissions.byStatus.new ?? 0} new · ${data.submissions.byStatus.in_review ?? 0} in review`}
+          icon={<Inbox />}
+          tone={open > 0 ? "accent" : "neutral"}
+          to="/admin/submissions"
+          search={SUBMISSION_SEARCH}
+        />
+        <Stat
+          label="Last 7 days"
+          value={data.submissions.last7Days}
+          hint={`${data.submissions.total} submissions all time`}
+          icon={<Activity />}
+        />
+        <Stat
+          label="Drafts to publish"
+          value={data.content.pendingPublish.length}
+          hint={`${data.content.total} content documents`}
+          icon={<Send />}
+          tone={data.content.pendingPublish.length > 0 ? "warning" : "success"}
+          to="/admin/content"
+        />
+        <Stat
+          label="Media"
+          value={data.media.total}
+          hint={`${data.media.published} live · ${data.media.archived} archived`}
+          icon={<Images />}
+          to="/admin/media"
+        />
+        <Stat
+          label="Team"
+          value={data.team.active}
+          hint={`${data.team.admins} admins · ${data.team.inactive} inactive`}
+          icon={<Users />}
+          to={staff.role === "admin" ? "/admin/users" : undefined}
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <SectionCard
+          title="Latest enquiries"
+          action={
+            <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
+              <Link to="/admin/submissions" search={SUBMISSION_SEARCH}>
+                View all
+              </Link>
+            </Button>
+          }
+        >
+          {data.submissions.recent.length ? (
+            <ul className="divide-y">
+              {data.submissions.recent.map((item) => (
+                <li key={item.id}>
+                  <Link
+                    to="/admin/submissions/$id"
+                    params={{ id: String(item.id) }}
+                    className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/40"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-medium">
                         {item.reference ?? `#${item.id}`}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-ink">{TYPE_LABELS[item.type] ?? item.type}</td>
-                    <td className="px-4 py-3">
-                      <div className="text-ink">{item.contactName ?? "—"}</div>
-                      <div className="text-xs text-ink-muted">{item.contactEmail}</div>
-                    </td>
-                    <td className="px-4 py-3 text-ink">{item.company ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.14em] ${STATUS_STYLES[item.status] ?? STATUS_STYLES.completed}`}>
-                        {STATUS_LABELS[item.status] ?? item.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-ink-muted">
-                      {new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(item.createdAt))}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono text-[9px] uppercase tracking-[0.14em] text-ink-muted">
-                      {item.shopifySyncedAt ? "Synced" : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        <span className="ml-1.5 font-normal text-muted-foreground">
+                          {SUBMISSION_TYPE_LABELS[item.type] ?? item.type}
+                        </span>
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {item.contactEmail} · {formatRelative(item.createdAt)}
+                      </p>
+                    </div>
+                    <StatusPill status={item.status} />
+                    <ArrowUpRight
+                      className="size-4 shrink-0 text-muted-foreground/50"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              icon={<Inbox />}
+              title="No enquiries yet"
+              copy="Website forms appear here the moment a customer submits one."
+              className="m-4 border-0"
+            />
+          )}
+        </SectionCard>
 
-          {result?.ok && result.pageCount > 1 ? (
-            <div className="mt-4 flex items-center justify-between">
-              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-                Page {result.page} of {result.pageCount} · {result.total} total
-              </span>
-              <div className="flex gap-2">
-                <button
-                  disabled={result.page <= 1}
-                  onClick={() => void navigate({ to: "/admin", search: { ...search, page: result.page - 1 } })}
-                  className="inline-flex h-10 items-center gap-1 border border-rule px-4 font-mono text-[10px] uppercase tracking-[0.16em] text-ink hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronLeft className="h-4 w-4" /> Prev
-                </button>
-                <button
-                  disabled={result.page >= result.pageCount}
-                  onClick={() => void navigate({ to: "/admin", search: { ...search, page: result.page + 1 } })}
-                  className="inline-flex h-10 items-center gap-1 border border-rule px-4 font-mono text-[10px] uppercase tracking-[0.16em] text-ink hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Next <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </>
-      )}
-    </AdminShell>
+        <SectionCard
+          title="Waiting to publish"
+          action={
+            <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
+              <Link to="/admin/content">All documents</Link>
+            </Button>
+          }
+        >
+          {data.content.pendingPublish.length ? (
+            <ul className="divide-y">
+              {data.content.pendingPublish.map((item) => (
+                <li key={item.key}>
+                  <Link
+                    to="/admin/content/$key"
+                    params={{ key: item.key }}
+                    className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/40"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-medium">{item.label}</p>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {item.group} · edited {formatRelative(item.updatedAt)}
+                        {item.updatedBy ? ` by ${item.updatedBy}` : ""}
+                      </p>
+                    </div>
+                    <Pill tone="warning" dot>
+                      Draft
+                    </Pill>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              icon={<Send />}
+              title="Everything is published"
+              copy={`The website matches the CMS. Last publish ${formatRelative(data.content.lastPublishedAt)}.`}
+              className="m-4 border-0"
+            />
+          )}
+        </SectionCard>
+      </div>
+
+      <div className="mt-4">
+        <SectionCard
+          title="Recent activity"
+          action={
+            staff.role === "admin" ? (
+              <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
+                <Link to="/admin/activity" search={ACTIVITY_SEARCH}>
+                  Full log
+                </Link>
+              </Button>
+            ) : null
+          }
+        >
+          {data.activity.length ? (
+            <ul className="divide-y">
+              {data.activity.map((entry) => (
+                <li key={entry.id} className="flex items-center gap-3 px-4 py-2.5">
+                  <InitialsAvatar name={entry.staff ?? "System"} className="size-6 text-[10px]" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px]">
+                      <span className="font-medium">{entry.staff ?? "System"}</span>{" "}
+                      <span className="text-muted-foreground">
+                        {humaniseAction(entry.action).toLowerCase()}
+                      </span>{" "}
+                      {entry.targetId ? (
+                        <code className="rounded bg-muted px-1 py-px font-mono text-[11px]">
+                          {entry.targetId}
+                        </code>
+                      ) : null}
+                    </p>
+                  </div>
+                  <time
+                    className="shrink-0 text-xs text-muted-foreground"
+                    dateTime={entry.createdAt}
+                    title={formatDateTime(entry.createdAt)}
+                  >
+                    {formatRelative(entry.createdAt)}
+                  </time>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              icon={<Activity />}
+              title="Nothing recorded yet"
+              copy="Saves, publishes and account changes are logged here."
+              className="m-4 border-0"
+            />
+          )}
+        </SectionCard>
+      </div>
+    </CmsShell>
   );
 }

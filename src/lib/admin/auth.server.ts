@@ -17,8 +17,9 @@ const ADMIN_SESSION_COOKIE = "sa_admin_session";
 const SESSION_MAX_AGE = 60 * 60 * 8; // 8 hours
 
 const UNAUTHORIZED = "ADMIN_UNAUTHORIZED";
+const FORBIDDEN = "ADMIN_FORBIDDEN";
 
-type AdminSessionData = { staffUserId?: number };
+type AdminSessionData = { staffUserId?: number; sessionVersion?: number };
 
 function adminSessionConfig(secret: string) {
   return {
@@ -63,40 +64,86 @@ export async function getCurrentStaff(): Promise<StaffUser | null> {
   const session = await getAdminSession();
   if (!session?.data.staffUserId) return null;
   const db = getDb();
-  const rows = await db
-    .select()
-    .from(staffUsers)
-    .where(eq(staffUsers.id, session.data.staffUserId))
-    .limit(1);
-  return rows[0] ?? null;
+  let rows;
+  try {
+    rows = await db
+      .select()
+      .from(staffUsers)
+      .where(eq(staffUsers.id, session.data.staffUserId))
+      .limit(1);
+  } catch (error) {
+    // A session that cannot be verified is not a session: fail closed rather
+    // than throwing, so the sign-in screen still renders during an outage. The
+    // cookie is left alone, because a transient blip must not sign staff out.
+    console.error("[auth] Staff session could not be verified:", error);
+    return null;
+  }
+  const staff = rows[0];
+  if (!staff || !staff.isActive || session.data.sessionVersion !== staff.sessionVersion) {
+    await logoutStaff();
+    return null;
+  }
+  return staff;
 }
 
 /** Throw if there is no authenticated staff user. Used to guard admin fns. */
 export async function requireAdmin(): Promise<StaffUser> {
   const staff = await getCurrentStaff();
-  if (!staff) {
+  if (!staff || staff.mustChangePassword) {
     throw new Error(UNAUTHORIZED);
   }
   return staff;
 }
 
+export async function requireAuthenticatedStaff(): Promise<StaffUser> {
+  const staff = await getCurrentStaff();
+  if (!staff) throw new Error(UNAUTHORIZED);
+  return staff;
+}
+
+/** Any active staff member. Kept separate from admin-role authorization. */
+export const requireStaff = requireAdmin;
+
+export async function requireAdminRole(): Promise<StaffUser> {
+  const staff = await requireStaff();
+  if (staff.role !== "admin") throw new Error(FORBIDDEN);
+  return staff;
+}
+
 export function isUnauthorizedError(error: unknown): boolean {
-  return error instanceof Error && error.message === UNAUTHORIZED;
+  return error instanceof Error && [UNAUTHORIZED, FORBIDDEN].includes(error.message);
+}
+
+export function validatePassword(password: string): string | null {
+  if (password.length < 12) return "Password must be at least 12 characters.";
+  if (password.length > 200) return "Password must be 200 characters or fewer.";
+  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password)) {
+    return "Password must include upper-case, lower-case and numeric characters.";
+  }
+  return null;
 }
 
 export async function loginStaff(
   email: string,
   password: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; mustChangePassword?: boolean }> {
   const normalizedEmail = email.trim().toLowerCase();
   const db = getDb();
-  const rows = await db
-    .select()
-    .from(staffUsers)
-    .where(eq(staffUsers.email, normalizedEmail))
-    .limit(1);
+  let rows;
+  try {
+    rows = await db
+      .select()
+      .from(staffUsers)
+      .where(eq(staffUsers.email, normalizedEmail))
+      .limit(1);
+  } catch (error) {
+    // Say plainly that the CMS is unavailable rather than crashing the sign-in
+    // screen; the reason never distinguishes a real account from a missing one.
+    console.error("[auth] Sign-in could not reach the database:", error);
+    return { ok: false, error: "The CMS is temporarily unavailable. Try again shortly." };
+  }
   const user = rows[0];
-  if (!user) return { ok: false, error: "Invalid email or password." };
+  if (!user || !user.isActive) return { ok: false, error: "Invalid email or password." };
 
   const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) return { ok: false, error: "Invalid email or password." };
@@ -107,8 +154,8 @@ export async function loginStaff(
   const session = await getServerSessionManager<AdminSessionData>(
     adminSessionConfig(secret),
   );
-  await session.update({ staffUserId: user.id });
-  return { ok: true };
+  await session.update({ staffUserId: user.id, sessionVersion: user.sessionVersion });
+  return { ok: true, mustChangePassword: user.mustChangePassword };
 }
 
 export async function logoutStaff(): Promise<void> {

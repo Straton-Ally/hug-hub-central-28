@@ -1,55 +1,72 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { ArrowLeft, CheckCircle2, Image as ImageIcon, Loader2, Send } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Download,
+  Eye,
+  FileQuestion,
+  Mail,
+  Paperclip,
+  Send,
+} from "lucide-react";
+import { useState, type FormEvent, type ReactNode } from "react";
+import { toast } from "sonner";
 
-import { AdminShell } from "@/components/admin/AdminShell";
+import { CmsShell } from "@/components/admin/CmsShell";
+import {
+  EmptyState,
+  formatBytes,
+  formatDateTime,
+  formatRelative,
+  InitialsAvatar,
+  Notice,
+  Pill,
+  SectionCard,
+  Spinner,
+  StatusPill,
+  SUBMISSION_STATUS_LABELS,
+  SUBMISSION_TYPE_LABELS,
+} from "@/components/admin/ui";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useHydrated } from "@/hooks/use-hydrated";
 import {
   addSubmissionNote,
-  getAttachmentDownload,
   getAdminSession,
+  getAttachmentDownload,
   getSubmissionDetail,
   markSubmissionReviewed,
   setSubmissionStatus,
   syncSubmissionToShopify,
   type SubmissionDetail,
 } from "@/lib/admin/admin.functions";
+import { cmsHead } from "@/lib/admin/head";
+import { cn } from "@/lib/utils";
 
-const TYPE_LABELS: Record<string, string> = {
-  part_inquiry: "Part inquiry",
-  credit_account: "Credit account",
-  return_request: "Return request",
-  support_tracking: "Order tracking",
-  support_resources: "Resource request",
-  support_question: "Product question",
-  unsubscribe: "Unsubscribe",
-};
+type Status = SubmissionDetail["status"];
 
-const STATUS_OPTIONS = [
-  { value: "new", label: "New" },
-  { value: "in_review", label: "In review" },
-  { value: "approved", label: "Approved" },
-  { value: "rejected", label: "Rejected" },
-  { value: "completed", label: "Completed" },
-] as const;
+const SUBMISSION_SEARCH = { type: "all", status: "all", search: "", page: 1 } as const;
 
 export const Route = createFileRoute("/admin/submissions/$id")({
-  head: () => ({
-    meta: [{ title: "Submission | Spares Automation Admin" }, { name: "robots", content: "noindex, nofollow" }],
-  }),
+  head: () => cmsHead("Submission"),
   loader: async ({ params }) => {
     const staff = await getAdminSession();
-    if (!staff) {
-      throw redirect({ to: "/admin/login" });
-    }
+    if (!staff) throw redirect({ to: "/admin/login" });
+    if (staff.mustChangePassword) throw redirect({ to: "/admin/change-password" });
     const result = await getSubmissionDetail({ data: { id: Number(params.id) } });
-    if (!result.ok) {
-      throw redirect({ to: "/admin", search: { type: "all", status: "all", search: "", page: 1 } });
-    }
+    if (!result.ok) throw redirect({ to: "/admin/submissions", search: SUBMISSION_SEARCH });
     return { staff, submission: result.submission };
   },
   component: SubmissionDetailPage,
 });
+
+/** "partNumber" → "Part number", for payload keys with no declared schema. */
+function fieldLabel(key: string) {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replaceAll("_", " ")
+    .replace(/^./, (letter) => letter.toUpperCase());
+}
 
 function SubmissionDetailPage() {
   const hydrated = useHydrated();
@@ -59,19 +76,17 @@ function SubmissionDetailPage() {
   const [noteBusy, setNoteBusy] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncError, setSyncError] = useState("");
-  const [notice, setNotice] = useState("");
 
-  async function changeStatus(status: (typeof STATUS_OPTIONS)[number]["value"]) {
+  async function changeStatus(status: Status) {
     setStatusBusy(true);
-    setNotice("");
     try {
-      const result = await setSubmissionStatus({ data: { id: submission.id, status } });
+      const result = await setSubmissionStatus({ data: { id: submission.id, status: status as never } });
       if (result.ok) {
-        setSubmission((prev) => ({ ...prev, status }));
-        setNotice(`Status updated to ${status.replace("_", " ")}.`);
+        setSubmission((previous) => ({ ...previous, status }));
+        toast.success(`Moved to ${SUBMISSION_STATUS_LABELS[status].toLowerCase()}`);
       }
     } catch {
-      setNotice("Could not update status.");
+      toast.error("Could not update the status.");
     } finally {
       setStatusBusy(false);
     }
@@ -79,19 +94,18 @@ function SubmissionDetailPage() {
 
   async function markReviewed() {
     setStatusBusy(true);
-    setNotice("");
     try {
       const result = await markSubmissionReviewed({ data: { id: submission.id } });
       if (result.ok) {
-        setSubmission((prev) => ({
-          ...prev,
+        setSubmission((previous) => ({
+          ...previous,
           reviewedByName: staff.name,
           reviewedAt: new Date().toISOString(),
         }));
-        setNotice("Submission marked as reviewed.");
+        toast.success("Marked as reviewed");
       }
     } catch {
-      setNotice("Could not mark this submission as reviewed.");
+      toast.error("Could not mark this submission as reviewed.");
     } finally {
       setStatusBusy(false);
     }
@@ -103,47 +117,41 @@ function SubmissionDetailPage() {
     const body = String(new FormData(form).get("body") ?? "").trim();
     if (!body) return;
     setNoteBusy(true);
-    setNotice("");
     try {
       const result = await addSubmissionNote({ data: { submissionId: submission.id, body } });
       if (result.ok) {
-        setSubmission((prev) => ({
-          ...prev,
+        setSubmission((previous) => ({
+          ...previous,
           notes: [
             { id: Date.now(), body, staffName: staff.name, createdAt: new Date().toISOString() },
-            ...prev.notes,
+            ...previous.notes,
           ],
         }));
         form.reset();
       }
     } catch {
-      setNotice("Could not add note.");
+      toast.error("Could not add the note.");
     } finally {
       setNoteBusy(false);
     }
   }
 
-  const payloadEntries = Object.entries(submission.payload).filter(
-    ([, value]) => value !== null && value !== undefined && String(value).trim() !== "",
-  );
-
   async function runSync() {
     setSyncBusy(true);
     setSyncError("");
-    setNotice("");
     try {
       const result = await syncSubmissionToShopify({ data: { id: submission.id } });
       if (!result.ok) {
         setSyncError(result.error);
         return;
       }
-      setSubmission((prev) => ({
-        ...prev,
+      setSubmission((previous) => ({
+        ...previous,
         status: "approved",
         shopifyCustomerId: result.shopifyCustomerId,
         shopifySyncedAt: result.syncedAt,
       }));
-      setNotice("Synced to Shopify and marked approved.");
+      toast.success("Synced to Shopify", { description: "The application is now approved." });
     } catch {
       setSyncError("Could not sync to Shopify.");
     } finally {
@@ -153,216 +161,268 @@ function SubmissionDetailPage() {
 
   async function viewAttachment(id: number) {
     const result = await getAttachmentDownload({ data: { id } });
-    if (result.ok) {
-      if (!result.mime.startsWith("image/")) {
-        const link = document.createElement("a");
-        link.href = result.dataUrl;
-        link.download = result.filename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        return;
-      }
-      const win = window.open();
-      if (win) {
-        win.document.title = result.filename;
-        const image = win.document.createElement("img");
-        image.src = result.dataUrl;
-        image.alt = result.filename;
-        image.style.maxWidth = "100%";
-        win.document.body.appendChild(image);
-      }
-    } else {
-      setNotice(result.error);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    if (!result.mime.startsWith("image/")) {
+      const link = document.createElement("a");
+      link.href = result.dataUrl;
+      link.download = result.filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return;
+    }
+    const win = window.open();
+    if (win) {
+      win.document.title = result.filename;
+      const image = win.document.createElement("img");
+      image.src = result.dataUrl;
+      image.alt = result.filename;
+      image.style.maxWidth = "100%";
+      win.document.body.appendChild(image);
     }
   }
 
+  const payloadEntries = Object.entries(submission.payload).filter(
+    ([, value]) => value !== null && value !== undefined && String(value).trim() !== "",
+  );
+
   return (
-    <AdminShell staff={staff} title={submission.reference ?? `Submission #${submission.id}`} eyebrow={TYPE_LABELS[submission.type] ?? submission.type}>
-      <Link to="/admin" search={{ type: "all", status: "all", search: "", page: 1 }} className="mb-5 inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted hover:text-accent">
-        <ArrowLeft className="h-4 w-4" /> Back to submissions
-      </Link>
-
-      {notice ? (
-        <div role="status" className="mb-5 border border-accent/40 bg-accent/10 p-3 text-sm text-ink">{notice}</div>
-      ) : null}
-
-      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-5">
-          <section className="border border-rule bg-surface p-5">
-            <h2 className="font-display text-lg font-bold uppercase tracking-tight">Submission details</h2>
-            <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
-              <DetailRow label="Contact name" value={submission.contactName} />
-              <DetailRow label="Contact email" value={submission.contactEmail} />
-              <DetailRow label="Company" value={submission.company} />
-              <DetailRow label="Reference" value={submission.reference} />
-              <DetailRow
-                label="Received"
-                value={new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(submission.createdAt))}
-              />
-              <DetailRow label="Reviewed by" value={submission.reviewedByName} />
+    <CmsShell
+      staff={staff}
+      breadcrumbs={[{ label: "Submissions", to: "/admin/submissions" }]}
+      title={submission.reference ?? `Submission #${submission.id}`}
+      subtitle={`${SUBMISSION_TYPE_LABELS[submission.type] ?? submission.type} · received ${formatRelative(submission.createdAt)}`}
+      actions={
+        <>
+          <Button variant="outline" size="sm" asChild>
+            <a href={`mailto:${submission.contactEmail}`}>
+              <Mail /> Reply by email
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/admin/submissions" search={SUBMISSION_SEARCH}>
+              <ArrowLeft /> Inbox
+            </Link>
+          </Button>
+        </>
+      }
+    >
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
+        <div className="min-w-0 space-y-4">
+          <SectionCard
+            title="Contact"
+            action={<StatusPill status={submission.status} />}
+          >
+            <dl className="divide-y">
+              <DetailRow label="Name">{submission.contactName ?? "—"}</DetailRow>
+              <DetailRow label="Email">
+                <a
+                  href={`mailto:${submission.contactEmail}`}
+                  className="text-primary hover:underline"
+                >
+                  {submission.contactEmail}
+                </a>
+              </DetailRow>
+              <DetailRow label="Company">{submission.company ?? "—"}</DetailRow>
+              <DetailRow label="Reference">
+                <span className="font-mono text-[12px]">{submission.reference ?? "—"}</span>
+              </DetailRow>
+              <DetailRow label="Received">{formatDateTime(submission.createdAt)}</DetailRow>
+              <DetailRow label="Reviewed by">
+                {submission.reviewedByName ? (
+                  <span className="flex items-center gap-2">
+                    <InitialsAvatar
+                      name={submission.reviewedByName}
+                      className="size-5 text-[9px]"
+                    />
+                    {submission.reviewedByName}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">Not reviewed yet</span>
+                )}
+              </DetailRow>
             </dl>
-          </section>
+          </SectionCard>
 
-          <section className="border border-rule bg-surface p-5">
-            <h2 className="font-display text-lg font-bold uppercase tracking-tight">Captured fields</h2>
+          <SectionCard title="Captured fields">
             {payloadEntries.length === 0 ? (
-              <p className="mt-3 text-sm text-ink-muted">No additional fields were captured.</p>
+              <EmptyState
+                icon={<FileQuestion />}
+                title="No additional fields captured"
+                className="m-4 border-0"
+              />
             ) : (
-              <dl className="mt-4 divide-y divide-rule">
+              <dl className="divide-y">
                 {payloadEntries.map(([key, value]) => (
-                  <div key={key} className="grid gap-1 py-3 sm:grid-cols-[220px_1fr] sm:gap-4">
-                    <dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">{key}</dt>
-                    <dd className="whitespace-pre-wrap text-sm text-ink">{String(value)}</dd>
-                  </div>
+                  <DetailRow key={key} label={fieldLabel(key)}>
+                    <span className="whitespace-pre-wrap">{String(value)}</span>
+                  </DetailRow>
                 ))}
               </dl>
             )}
-          </section>
+          </SectionCard>
 
-          <section className="border border-rule bg-surface p-5">
-            <h2 className="font-display text-lg font-bold uppercase tracking-tight">Attachments</h2>
+          <SectionCard
+            title="Attachments"
+            action={<Pill tone="neutral">{submission.attachments.length}</Pill>}
+          >
             {submission.attachments.length === 0 ? (
-              <p className="mt-3 text-sm text-ink-muted">No files attached.</p>
+              <EmptyState icon={<Paperclip />} title="No files attached" className="m-4 border-0" />
             ) : (
-              <ul className="mt-4 divide-y divide-rule">
+              <ul className="divide-y">
                 {submission.attachments.map((attachment) => (
-                  <li key={attachment.id} className="flex items-center justify-between gap-3 py-3">
-                    <span className="flex min-w-0 items-center gap-3">
-                      <ImageIcon className="h-4 w-4 shrink-0 text-ink-muted" />
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm text-ink">{attachment.filename}</span>
-                        <span className="block font-mono text-[9px] uppercase tracking-[0.14em] text-ink-muted">
-                          {attachment.mime} · {Math.max(1, Math.round(attachment.size / 1024))} KB
-                        </span>
-                      </span>
-                    </span>
-                    <button
-                      onClick={() => void viewAttachment(attachment.id)}
-                      className="inline-flex h-9 shrink-0 items-center border border-rule px-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink hover:border-accent hover:text-accent"
-                    >
-                      {attachment.mime.startsWith("image/") ? "View" : "Download"}
-                    </button>
+                  <li key={attachment.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <Paperclip
+                      className="size-4 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-medium">{attachment.filename}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {attachment.mime} · {formatBytes(attachment.size)}
+                      </p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => void viewAttachment(attachment.id)}>
+                      {attachment.mime.startsWith("image/") ? (
+                        <>
+                          <Eye /> View
+                        </>
+                      ) : (
+                        <>
+                          <Download /> Download
+                        </>
+                      )}
+                    </Button>
                   </li>
                 ))}
               </ul>
             )}
-          </section>
+          </SectionCard>
 
-          <section className="border border-rule bg-surface p-5">
-            <h2 className="font-display text-lg font-bold uppercase tracking-tight">Notes</h2>
-            <form method="post" onSubmit={addNote} className="mt-4 grid gap-3">
-              <textarea
+          <SectionCard title="Internal notes" description="Visible to staff only.">
+            <form onSubmit={addNote} className="space-y-2 border-b p-4">
+              <Textarea
                 name="body"
                 rows={3}
-                placeholder="Add an internal note (visible to staff only)"
-                className="resize-y border border-rule bg-background px-4 py-3 text-sm text-ink outline-none focus:border-accent"
+                placeholder="What did you find out, or what happens next?"
+                aria-label="Internal note"
               />
-              <div>
-                <button
-                  disabled={noteBusy || !hydrated}
-                  className="inline-flex h-10 items-center gap-2 bg-accent px-5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-white hover:brightness-110 disabled:opacity-60"
-                >
-                  {noteBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Add note
-                </button>
-              </div>
+              <Button type="submit" size="sm" disabled={noteBusy || !hydrated}>
+                {noteBusy ? <Spinner /> : <Send />} Add note
+              </Button>
             </form>
-
-            <div className="mt-5 space-y-3">
-              {submission.notes.length === 0 ? (
-                <p className="text-sm text-ink-muted">No notes yet.</p>
-              ) : (
-                submission.notes.map((note) => (
-                  <div key={note.id} className="border border-rule bg-background p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
-                        {note.staffName ?? "Staff"}
-                      </span>
-                      <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-ink-muted">
-                        {new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(note.createdAt))}
-                      </span>
+            {submission.notes.length === 0 ? (
+              <EmptyState
+                icon={<Send />}
+                title="No notes yet"
+                copy="Notes keep the team's context with the enquiry."
+                className="m-4 border-0"
+              />
+            ) : (
+              <ul className="divide-y">
+                {submission.notes.map((note) => (
+                  <li key={note.id} className="flex gap-3 px-4 py-3">
+                    <InitialsAvatar name={note.staffName ?? "Staff"} className="size-6 text-[10px]" />
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-baseline gap-2 text-[13px]">
+                        <span className="font-medium">{note.staffName ?? "Staff"}</span>
+                        <time
+                          className="text-xs text-muted-foreground"
+                          dateTime={note.createdAt}
+                          title={formatDateTime(note.createdAt)}
+                        >
+                          {formatRelative(note.createdAt)}
+                        </time>
+                      </p>
+                      <p className="mt-1 text-[13px] whitespace-pre-wrap">{note.body}</p>
                     </div>
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-ink">{note.body}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SectionCard>
         </div>
 
-        <aside className="space-y-5">
-          <section className="border border-rule bg-surface p-5">
-            <h2 className="font-display text-sm font-bold uppercase tracking-tight">Status</h2>
-            <p className="mt-2 text-sm text-ink-muted">
-              Current: <span className="font-semibold text-ink">{submission.status.replace("_", " ")}</span>
-            </p>
-            <div className="mt-4 grid gap-2">
-              {STATUS_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  disabled={statusBusy || submission.status === option.value}
-                  onClick={() => void changeStatus(option.value)}
-                  className={`inline-flex h-10 items-center justify-center border px-4 font-mono text-[10px] font-bold uppercase tracking-[0.16em] transition-colors disabled:cursor-not-allowed ${
-                    submission.status === option.value
-                      ? "border-accent bg-accent text-white"
-                      : "border-rule bg-background text-ink hover:border-accent hover:text-accent disabled:opacity-40"
-                  }`}
-                >
-                  {submission.status === option.value ? <CheckCircle2 className="mr-2 h-4 w-4" /> : null}
-                  {option.label}
-                </button>
-              ))}
-              {!submission.reviewedAt ? (
-                <button
+        <aside className="space-y-4 lg:sticky lg:top-18 lg:self-start">
+          <SectionCard title="Status">
+            <div className="space-y-1 p-2">
+              {(Object.keys(SUBMISSION_STATUS_LABELS) as Status[]).map((status) => {
+                const current = submission.status === status;
+                return (
+                  <button
+                    key={status}
+                    type="button"
+                    disabled={statusBusy || current}
+                    onClick={() => void changeStatus(status)}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] transition-colors disabled:cursor-default",
+                      current
+                        ? "bg-primary/10 font-medium text-primary"
+                        : "hover:bg-accent hover:text-accent-foreground",
+                    )}
+                  >
+                    {current ? (
+                      <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" />
+                    ) : (
+                      <span className="size-3.5 shrink-0" />
+                    )}
+                    {SUBMISSION_STATUS_LABELS[status]}
+                  </button>
+                );
+              })}
+            </div>
+            {submission.reviewedAt ? null : (
+              <div className="border-t p-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
                   disabled={statusBusy}
                   onClick={() => void markReviewed()}
-                  className="inline-flex h-10 items-center justify-center border border-rule bg-background px-4 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink hover:border-accent hover:text-accent disabled:opacity-40"
                 >
                   Mark reviewed
-                </button>
-              ) : null}
-            </div>
-          </section>
+                </Button>
+              </div>
+            )}
+          </SectionCard>
 
-          {submission.type === "credit_account" && (
-            <section className="border border-rule bg-surface p-5">
-              <h2 className="font-display text-sm font-bold uppercase tracking-tight">Shopify sync</h2>
-              {submission.shopifySyncedAt ? (
-                <p className="mt-2 text-sm text-ink-muted">
-                  Synced to Shopify customer on{" "}
-                  {new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(submission.shopifySyncedAt))}.
-                </p>
-              ) : (
-                <>
-                  <p className="mt-2 text-sm text-ink-muted">
-                    Create a tagged Shopify customer from this approved application. Orders and invoicing stay in Shopify.
-                  </p>
-                  {syncError ? (
-                    <div role="alert" className="mt-3 border border-red-300 bg-red-50 p-3 text-sm text-red-800">{syncError}</div>
-                  ) : null}
-                  <button
-                    disabled={syncBusy}
-                    onClick={() => void runSync()}
-                    className="mt-4 inline-flex h-10 items-center gap-2 bg-accent px-5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-white hover:brightness-110 disabled:opacity-60"
-                  >
-                    {syncBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                    {syncBusy ? "Syncing" : "Approve & sync to Shopify"}
-                  </button>
-                </>
-              )}
-            </section>
-          )}
+          {submission.type === "credit_account" ? (
+            <SectionCard title="Shopify">
+              <div className="space-y-3 p-3.5">
+                {submission.shopifySyncedAt ? (
+                  <Notice tone="success" title="Customer created">
+                    Synced on {formatDateTime(submission.shopifySyncedAt)}.
+                  </Notice>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Create a tagged Shopify customer from this approved application. Orders and
+                      invoicing stay in Shopify.
+                    </p>
+                    {syncError ? <Notice tone="danger">{syncError}</Notice> : null}
+                    <Button size="sm" className="w-full" disabled={syncBusy} onClick={() => void runSync()}>
+                      {syncBusy ? <Spinner /> : <CheckCircle2 />}
+                      {syncBusy ? "Syncing" : "Approve and sync"}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </SectionCard>
+          ) : null}
         </aside>
       </div>
-    </AdminShell>
+    </CmsShell>
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string | null }) {
+function DetailRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div>
-      <dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">{label}</dt>
-      <dd className="mt-1 text-sm text-ink">{value ?? "—"}</dd>
+    <div className="flex flex-wrap gap-3 px-4 py-2.5">
+      <dt className="w-32 shrink-0 text-xs text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 flex-1 text-[13px]">{children}</dd>
     </div>
   );
 }

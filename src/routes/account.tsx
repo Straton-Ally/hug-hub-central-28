@@ -6,20 +6,30 @@ import { SiteHeader } from "@/components/shopify/SiteHeader";
 import { SiteFooter } from "@/components/shopify/SiteFooter";
 import { getShopifyCustomer, logoutShopifyCustomer } from "@/lib/api/shopify.functions";
 import { formatMoney } from "@/lib/shopify/format";
+import { useContent } from "@/lib/content/ContentContext";
+import { useEditable } from "@/lib/content/edit-mode";
+import { getPublishedContent } from "@/lib/content/content.functions";
+import { contentPageHead } from "@/lib/seo";
 
 type StorefrontCustomer = Awaited<ReturnType<typeof getShopifyCustomer>>;
 
 export const Route = createFileRoute("/account")({
-  head: () => ({
-    meta: [
-      { title: "Customer Account | Spares Automation" },
-      { name: "robots", content: "noindex, nofollow" },
-    ],
-  }),
+  loader: async () => {
+    const { site, functional } = await getPublishedContent();
+    return { site, seo: functional.account.seo };
+  },
+  head: ({ loaderData }) =>
+    contentPageHead(loaderData?.seo, loaderData?.site, "/account", {
+      title: "Customer Account",
+      description: "View your Spares Automation account details, credit status, and order history.",
+    }, { noIndex: true, noFollow: true }),
   component: AccountPage,
 });
 
 function AccountPage() {
+  const { functional, messages } = useContent();
+  const copy = functional.account;
+  const edit = useEditable();
   const [storefrontCustomer, setStorefrontCustomer] = useState<StorefrontCustomer>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -29,14 +39,14 @@ function AccountPage() {
       try {
         setStorefrontCustomer(await getShopifyCustomer());
       } catch {
-        setError("We could not load your account. Please refresh and try again.");
+        setError(messages["account.loadFailed"]);
       } finally {
         setLoading(false);
       }
     }
 
     loadAccount();
-  }, []);
+  }, [messages]);
 
   async function handleLogout() {
     await logoutShopifyCustomer();
@@ -60,11 +70,11 @@ function AccountPage() {
       <SiteHeader />
       <main id="main-content" className="mx-auto max-w-[1200px] px-4 py-8 md:px-6 md:py-12">
         <div className="mb-6 md:mb-8">
-          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
-            Customer Account
+          <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted" {...edit(`functional.account.eyebrow`, "Page eyebrow")}>
+            {copy.eyebrow}
           </div>
-          <h1 className="mt-2 font-display text-2xl md:text-3xl lg:text-4xl font-extrabold uppercase tracking-tight">
-            Account
+          <h1 className="mt-2 font-display text-2xl md:text-3xl lg:text-4xl font-extrabold uppercase tracking-tight" {...edit(`functional.account.title`, "Page heading")}>
+            {copy.title}
           </h1>
         </div>
 
@@ -77,17 +87,17 @@ function AccountPage() {
           </div>
         ) : null}
         {loading ? (
-          <div className="border border-rule bg-surface px-4 py-12 text-center font-mono text-[10px] uppercase tracking-[0.25em] text-ink-muted md:px-8 md:py-16">
-            Loading account
+          <div className="border border-rule bg-surface px-4 py-12 text-center font-mono text-[10px] uppercase tracking-[0.25em] text-ink-muted md:px-8 md:py-16" {...edit(`functional.account.loadingLabel`, "Loading label")}>
+            {copy.loadingLabel}
           </div>
         ) : !isLoggedIn ? (
           <section className="border border-rule bg-surface p-5 md:p-8">
             <User className="mb-4 md:mb-5 h-7 w-7 md:h-8 md:w-8 text-accent" />
             <h2 className="font-display text-xl md:text-2xl font-bold uppercase tracking-tight">
-              Sign in to view your account
+              {copy.emptyTitle || messages["account.signIn"]}
             </h2>
-            <p className="mt-3 md:mt-4 max-w-2xl text-sm leading-relaxed text-ink-muted">
-              Sign in securely to view your account details and continue to the catalogue.
+            <p className="mt-3 md:mt-4 max-w-2xl text-sm leading-relaxed text-ink-muted" {...edit(`functional.account.emptyCopy`, "Empty state copy")}>
+              {copy.emptyCopy}
             </p>
             <Link
               to="/login"

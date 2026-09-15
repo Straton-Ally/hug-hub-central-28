@@ -28,10 +28,29 @@ const cmsIntegrationConfigured = Boolean(
   cmsTestEnv.databaseUrl && cmsTestEnv.adminEmail && cmsTestEnv.adminPassword,
 );
 
+let reachable: Promise<boolean> | null = null;
+
+/** The CMS database is optional locally, so integration tests skip when it is down. */
+function databaseReachable() {
+  if (!cmsIntegrationConfigured) return Promise.resolve(false);
+  reachable ??= (async () => {
+    const sql = postgres(cmsTestEnv.databaseUrl!, { max: 1, prepare: false, connect_timeout: 5 });
+    try {
+      await sql`select 1`;
+      return true;
+    } catch {
+      return false;
+    } finally {
+      await sql.end({ timeout: 2 }).catch(() => undefined);
+    }
+  })();
+  return reachable;
+}
+
 test("unauthenticated staff are redirected from /admin to the login page", async ({ page }) => {
   await page.goto("/admin");
   await expect(page).toHaveURL(/\/admin\/login$/);
-  await expect(page.getByRole("heading", { name: "Admin sign in" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in to the CMS" })).toBeVisible();
   await expect(page.getByLabel("Email address")).toBeVisible();
   await expect(page.getByLabel("Password")).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
@@ -40,7 +59,7 @@ test("unauthenticated staff are redirected from /admin to the login page", async
 test("admin login rejects an empty submission and stays on the page", async ({ page }) => {
   await page.goto("/admin/login");
   await expect(page).toHaveURL(/\/admin\/login$/);
-  await expect(page.getByRole("heading", { name: "Admin sign in" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in to the CMS" })).toBeVisible();
 });
 
 test("credit account page exposes the credit application form", async ({ page }) => {
@@ -76,7 +95,7 @@ test("returns page directs signed-out customers to their account", async ({ page
 });
 
 test("return request persists in the CMS with an email reference", async ({ page }, testInfo) => {
-  test.skip(!cmsIntegrationConfigured, "CMS database test environment is not configured");
+  test.skip(!(await databaseReachable()), "CMS database is not reachable");
 
   const unique = `${testInfo.project.name}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const email = `return-${unique}@example.com`;
@@ -132,7 +151,7 @@ test("return request persists in the CMS with an email reference", async ({ page
 test("public submission persists and staff can review, update, and annotate it", async ({
   page,
 }, testInfo) => {
-  test.skip(!cmsIntegrationConfigured, "CMS database/admin test environment is not configured");
+  test.skip(!(await databaseReachable()), "CMS database is not reachable");
 
   const unique = `${testInfo.project.name}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const email = `cms-${unique}@example.com`;
@@ -194,9 +213,11 @@ test("public submission persists and staff can review, update, and annotate it",
     await page.getByLabel("Password").fill(cmsTestEnv.adminPassword!);
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/admin(?:\?|$)/);
+    await expect(page.getByRole("heading", { level: 1, name: "Overview" })).toBeVisible();
 
+    await page.getByRole("link", { name: "Open inbox" }).click();
+    await expect(page).toHaveURL(/\/admin\/submissions/);
     await page.getByPlaceholder("Reference, email, name or company").fill(email);
-    await page.getByRole("button", { name: "Apply" }).click();
     await page.getByRole("link", { name: reference! }).click();
 
     await page.getByRole("button", { name: "In review" }).click();
@@ -231,7 +252,7 @@ test("public submission persists and staff can review, update, and annotate it",
 });
 
 test("honeypot submissions are rejected without creating a row", async ({ page }, testInfo) => {
-  test.skip(!cmsIntegrationConfigured, "CMS database test environment is not configured");
+  test.skip(!(await databaseReachable()), "CMS database is not reachable");
 
   const email = `spam-${testInfo.project.name}-${Date.now()}@example.com`;
   const sql = postgres(cmsTestEnv.databaseUrl!, { max: 1, prepare: false });

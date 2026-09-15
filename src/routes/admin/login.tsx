@@ -1,19 +1,21 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
-import { adminLogin, getAdminSession } from "@/lib/admin/admin.functions";
+import { ThemeToggle } from "@/components/admin/theme";
+import { Notice, Spinner } from "@/components/admin/ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { adminLogin, getAdminSession } from "@/lib/admin/admin.functions";
+import { cmsHead } from "@/lib/admin/head";
 
 export const Route = createFileRoute("/admin/login")({
-  head: () => ({
-    meta: [{ title: "Admin Sign In | Spares Automation" }, { name: "robots", content: "noindex, nofollow" }],
-  }),
+  head: () => cmsHead("Sign in"),
   loader: async () => {
     const staff = await getAdminSession();
-    if (staff) {
-      throw redirect({ to: "/admin", search: { type: "all", status: "all", search: "", page: 1 } });
-    }
+    if (staff) throw redirect({ to: "/admin" });
     return {};
   },
   component: AdminLoginPage,
@@ -30,7 +32,6 @@ function AdminLoginPage() {
     const form = new FormData(event.currentTarget);
     setBusy(true);
     setError("");
-
     try {
       const result = await adminLogin({
         data: {
@@ -42,7 +43,8 @@ function AdminLoginPage() {
         setError(result.error ?? "Sign in failed.");
         return;
       }
-      void navigate({ to: "/admin", search: { type: "all", status: "all", search: "", page: 1 } });
+      if (result.mustChangePassword) void navigate({ to: "/admin/change-password" });
+      else void navigate({ to: "/admin" });
     } catch {
       setError("We could not sign you in. Please try again.");
     } finally {
@@ -51,54 +53,75 @@ function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-charcoal-deep px-4 text-white">
-      <div className="w-full max-w-md border border-white/15 bg-charcoal p-8">
-        <div className="mb-8 flex h-12 w-12 items-center justify-center bg-accent text-white">
-          <ShieldCheck className="h-6 w-6" />
-        </div>
-        <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/45">Staff access</div>
-        <h1 className="mt-2 font-display text-3xl font-extrabold uppercase tracking-tight">Admin sign in</h1>
-        <p className="mt-3 text-sm leading-6 text-white/55">
-          Restricted area for Spares Automation staff managing form submissions.
-        </p>
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <header className="flex items-center gap-2.5 px-5 py-4">
+        <span
+          className="flex size-6.5 items-center justify-center rounded-md bg-primary text-[11px] font-bold text-primary-foreground"
+          aria-hidden="true"
+        >
+          SA
+        </span>
+        <span className="text-[13px] font-semibold">Spares Automation</span>
+        <span className="ml-auto">
+          <ThemeToggle />
+        </span>
+      </header>
 
-        <form method="post" onSubmit={handleSubmit} className="mt-8 grid gap-5">
-          <label className="grid gap-2">
-            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/60">Email address</span>
-            <input
-              name="email"
-              type="email"
-              autoComplete="username"
-              required
-              className="h-12 border border-white/20 bg-white/5 px-4 text-sm text-white outline-none transition-colors placeholder:text-white/30 focus:border-accent"
-            />
-          </label>
-          <label className="grid gap-2">
-            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/60">Password</span>
-            <input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              className="h-12 border border-white/20 bg-white/5 px-4 text-sm text-white outline-none transition-colors placeholder:text-white/30 focus:border-accent"
-            />
-          </label>
+      <main className="flex flex-1 items-center justify-center px-5 pb-16">
+        <div className="w-full max-w-sm">
+          <div className="mb-6 text-center">
+            <span
+              className="mx-auto mb-4 flex size-11 items-center justify-center rounded-xl border bg-card"
+              aria-hidden="true"
+            >
+              <ShieldCheck className="size-5 text-primary" />
+            </span>
+            <h1 className="text-xl font-semibold tracking-tight">Sign in to the CMS</h1>
+            <p className="mt-1.5 text-[13px] text-muted-foreground">
+              Website copy, media, enquiries and accounts.
+            </p>
+          </div>
 
-          {error ? (
-            <div role="alert" className="border border-red-400/40 bg-red-500/10 p-4 text-sm leading-6 text-red-200">
-              {error}
+          <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border bg-card p-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-[12.5px] font-medium">
+                Email address
+              </Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="username"
+                autoFocus
+                required
+              />
             </div>
-          ) : null}
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-[12.5px] font-medium">
+                Password
+              </Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+              />
+            </div>
 
-          <button
-            disabled={busy || !hydrated}
-            className="inline-flex h-12 items-center justify-center gap-2 bg-accent px-6 font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-white transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-            Sign in
-          </button>
-        </form>
-      </div>
+            {error ? <Notice tone="danger">{error}</Notice> : null}
+
+            <Button type="submit" className="w-full" disabled={busy || !hydrated}>
+              {busy ? <Spinner /> : null} Sign in
+              {busy ? null : <ArrowRight />}
+            </Button>
+          </form>
+
+          <p className="mt-5 text-center text-xs text-muted-foreground">
+            Access is restricted to Spares Automation staff. Sessions expire after 8 hours.
+          </p>
+        </div>
+      </main>
     </div>
   );
 }

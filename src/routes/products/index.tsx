@@ -1,14 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpDown, ChevronRight, Filter, SlidersHorizontal } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import automation from "@/assets/Automation pic.jpg";
 import { ProductCard } from "@/components/shopify/ProductCard";
 import { SiteFooter } from "@/components/shopify/SiteFooter";
 import { SiteHeader } from "@/components/shopify/SiteHeader";
-import { getCollection, getPaginatedProducts } from "@/lib/api/shopify.functions";
+import { getCatalogProductsPage, getCollection } from "@/lib/api/shopify.functions";
+import { CATALOG_CATEGORIES, getCatalogueSearch } from "@/lib/catalog";
 import type { ShopifyProduct } from "@/lib/shopify/types";
-import { SITE } from "@/lib/site";
+import { useContent } from "@/lib/content/ContentContext";
+import { useEditable } from "@/lib/content/edit-mode";
+import { getPublishedContent } from "@/lib/content/content.functions";
+import { contentPageHead } from "@/lib/seo";
 
 type CategoryFilter = {
   label: string;
@@ -16,90 +20,77 @@ type CategoryFilter = {
   description: string;
 };
 
-const categoryFilters: CategoryFilter[] = [
-  {
-    label: "Asphalt / Blacktop Spares",
-    handle: "asphalt",
-    description: "Burners, conveyors, drum mixer wear parts",
-  },
-  {
-    label: "Concrete Spares",
-    handle: "concrete",
-    description: "Aggregate feeding, material silos, additives, water, air and automation controls",
-  },
-  {
-    label: "Packing Machinery",
-    handle: "packing",
-    description: "Automation and sensors, bag placement, filling, discharge and palletising",
-  },
-  {
-    label: "Automation & Drives",
-    handle: "automation",
-    description: "VFDs, PLC modules, relays, sensors",
-  },
-  {
-    label: "Home Automation and Controls",
-    handle: "home-controls",
-    description: "Smart relays, sensors, DIN rail supplies",
-  },
-  {
-    label: "Control Panels & Software",
-    handle: "control-panels-software",
-    description: "Control panels, PLC software and support",
-  },
-];
+const categoryGroups = CATALOG_CATEGORIES.map((category) => ({
+  ...category,
+  collections: [
+    { label: category.label, handle: category.handle, description: category.description },
+    ...category.productLines.map((line) => ({
+      label: line.label,
+      handle: line.collectionHandle,
+      description: `${line.label} products`,
+    })),
+  ] satisfies CategoryFilter[],
+}));
+const collectionFilters = categoryGroups.flatMap((category) => category.collections);
 
 export const Route = createFileRoute("/products/")({
   validateSearch: (search: Record<string, unknown>) => ({
     category: typeof search.category === "string" ? search.category : "all",
-    availability: search.availability === "available" ? "available" as const : "all" as const,
-    sort: ["price-asc", "price-desc", "title"].includes(String(search.sort)) ? search.sort as "price-asc" | "price-desc" | "title" : "newest" as const,
+    availability: search.availability === "available" ? ("available" as const) : ("all" as const),
+    sort: ["price-asc", "price-desc", "title"].includes(String(search.sort))
+      ? (search.sort as "price-asc" | "price-desc" | "title")
+      : ("newest" as const),
   }),
-  head: () => ({
-    meta: [
-      { title: "All Products | Spares Automation" },
-      {
-        name: "description",
-        content:
-          "Browse all products across asphalt, concrete, packing, automation and control categories.",
-      },
-    ],
-    links: [{ rel: "canonical", href: `${SITE.url}/products` }],
-  }),
-  loader: async () => {
-    const [initialPage, collections] = await Promise.all([
-      getPaginatedProducts({ data: { first: 48 } }),
+  loaderDeps: ({ search }) => ({ category: search.category }),
+  loader: async ({ deps }) => {
+    const collectionHandle = collectionFilters.some((category) => category.handle === deps.category)
+      ? deps.category
+      : undefined;
+    const [initialPage, collections, content] = await Promise.all([
+      getCatalogProductsPage({ data: { first: 48, collectionHandle } }),
       Promise.all(
-        categoryFilters.map(async (category) => {
+        categoryGroups.map(async (category) => {
           try {
             const collection = await getCollection({
               data: { handle: category.handle, first: 1 },
             });
 
-            return [category.handle, collection?.description.trim() || category.description] as const;
+            return [
+              category.handle,
+              collection?.description.trim() || category.description,
+            ] as const;
           } catch {
             return [category.handle, category.description] as const;
           }
         }),
       ),
+      getPublishedContent(),
     ]);
 
     return {
       initialPage,
       categoryDescriptions: Object.fromEntries(collections),
+      site: content.site,
+      seo: content.product.listingSeo,
     };
   },
+  head: ({ loaderData }) =>
+    contentPageHead(loaderData?.seo, loaderData?.site, "/products", {
+      title: "All Products",
+      description:
+        "Browse all products across asphalt, concrete, packing, automation and control categories.",
+    }),
   component: ProductsCataloguePage,
 });
 
-function productMatchesCategory(product: ShopifyProduct, handle: string) {
-  const normalizedTags = product.tags.map((tag) => tag.toLowerCase());
-  return normalizedTags.some(
-    (tag) => tag === handle || tag === `collection:${handle}` || tag.includes(handle),
-  );
-}
-
 function ProductsCataloguePage() {
+  const { catalogue, messages, product: productCopy } = useContent();
+  const edit = useEditable();
+  const presentation = new Map(catalogue.categories.map((category) => [category.handle, category]));
+  const displayedCategoryGroups = categoryGroups.filter((category) => presentation.get(category.handle)?.visible !== false).map((category) => {
+    const managed = presentation.get(category.handle);
+    return { ...category, label: managed?.label ?? category.label, description: managed?.description ?? category.description, collections: category.collections.map((collection, index) => index === 0 ? { ...collection, label: managed?.label ?? collection.label, description: managed?.description ?? collection.description } : collection) };
+  });
   const { initialPage, categoryDescriptions } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -108,17 +99,50 @@ function ProductsCataloguePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState("");
   const activeCategory = search.category;
+  const activeGroup = categoryGroups.find((category) =>
+    category.collections.some((collection) => collection.handle === activeCategory),
+  );
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(
+    activeGroup?.handle ?? null,
+  );
+  const sidebarRef = useRef<HTMLElement>(null);
   const availability = search.availability;
   const sort = search.sort;
-  const updateSearch = (updates: Partial<typeof search>) => void navigate({ search: (previous: typeof search) => ({ ...previous, ...updates }), replace: true });
+  const updateSearch = (updates: Partial<typeof search>) =>
+    void navigate({
+      search: (previous: typeof search) => ({ ...previous, ...updates }),
+      replace: true,
+    });
+
+  useEffect(() => {
+    setProducts(initialPage.products);
+    setPageInfo(initialPage.pageInfo);
+    setLoadError("");
+  }, [initialPage]);
+
+  useEffect(() => {
+    setExpandedCategory(activeGroup?.handle ?? null);
+  }, [activeGroup?.handle]);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const sidebar = sidebarRef.current;
+      const selected = sidebar?.querySelector<HTMLElement>("[data-catalog-active='true']");
+      if (!sidebar || !selected) return;
+
+      const sidebarBox = sidebar.getBoundingClientRect();
+      const selectedBox = selected.getBoundingClientRect();
+      sidebar.scrollTo({
+        top: Math.max(0, sidebar.scrollTop + selectedBox.top - sidebarBox.top - 12),
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [activeCategory, expandedCategory]);
 
   const filteredProducts = useMemo(() => {
     return products
       .filter((product) => {
-        if (activeCategory !== "all" && !productMatchesCategory(product, activeCategory)) {
-          return false;
-        }
-
         if (availability === "available" && !product.availableForSale) {
           return false;
         }
@@ -136,7 +160,7 @@ function ProductsCataloguePage() {
 
         return 0;
       });
-  }, [activeCategory, availability, products, sort]);
+  }, [availability, products, sort]);
 
   return (
     <div className="min-h-screen bg-background text-ink">
@@ -150,21 +174,37 @@ function ProductsCataloguePage() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal-deep via-charcoal-deep/70 to-charcoal-deep/10" />
         <div className="relative mx-auto w-full max-w-[1600px] px-4 py-6 md:px-6 md:py-8">
-          <div className="mb-2 flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.3em] text-white/60 md:text-[10px]">
+          <div
+            className="mb-2 flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.3em] text-white/60 md:text-[10px]"
+            {...edit(`product.listingEyebrow`, "Eyebrow")}
+          >
             <span className="h-px w-8 bg-accent" />
-            Product Catalogue / Cart
+            {productCopy.listingEyebrow}
           </div>
-          <h1 className="break-words font-display text-[clamp(1.45rem,5vw,2.25rem)] font-extrabold uppercase leading-none tracking-tight text-white">
-            ALL PRODUCTS <span className="text-accent">CATALOGUE</span>
+          <h1
+            className="break-words font-display text-[clamp(1.45rem,5vw,2.25rem)] font-extrabold uppercase leading-none tracking-tight text-white"
+            {...edit(`product.listingTitle`, "Listing heading")}
+          >
+            {productCopy.listingTitle}{" "}
+            <span className="text-accent" {...edit(`product.listingHighlight`, "Highlighted word")}>{productCopy.listingHighlight}</span>
           </h1>
-          <p className="mt-2 max-w-2xl pr-2 text-xs leading-relaxed text-white/70 md:pr-0 md:text-sm">
-            Browse the catalogue and narrow the visible products with the filters below.
-          </p>
+          {productCopy.listingIntro ? (
+            <p className="mt-2 max-w-2xl pr-2 text-xs leading-relaxed text-white/70 md:pr-0 md:text-sm" {...edit(`product.listingIntro`, "Introduction")}>
+              {productCopy.listingIntro}
+            </p>
+          ) : null}
         </div>
       </section>
 
-      <main id="main-content" className="mx-auto grid min-w-0 max-w-[1600px] grid-cols-1 gap-6 px-4 py-8 md:px-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="h-fit min-w-0 overflow-hidden border border-rule bg-surface">
+      <main
+        id="main-content"
+        className="mx-auto grid min-w-0 max-w-[1600px] grid-cols-1 gap-6 px-4 py-8 md:px-6 lg:grid-cols-[300px_minmax(0,1fr)]"
+      >
+        <aside
+          ref={sidebarRef}
+          aria-label="Product collections"
+          className="h-fit min-w-0 overflow-hidden border border-rule bg-surface lg:sticky lg:top-[116px] lg:max-h-[calc(100dvh-116px)] lg:self-start lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-gutter:auto] lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden xl:top-[180px] xl:max-h-[calc(100dvh-180px)]"
+        >
           <div className="border-b border-rule p-5">
             <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.3em] text-ink-muted">
               <Filter className="h-4 w-4 text-accent" />
@@ -173,9 +213,12 @@ function ProductsCataloguePage() {
           </div>
 
           <div className="p-3">
-            <button
-              type="button"
-              onClick={() => updateSearch({ category: "all" })}
+            <Link
+              to="/products"
+              search={getCatalogueSearch("all")}
+              aria-current={activeCategory === "all" ? "page" : undefined}
+              data-catalog-active={activeCategory === "all"}
+              onClick={() => setExpandedCategory(null)}
               className={`flex w-full items-center justify-between border px-4 py-4 text-left transition-colors ${
                 activeCategory === "all"
                   ? "border-accent bg-accent/10"
@@ -191,30 +234,82 @@ function ProductsCataloguePage() {
                 </span>
               </span>
               <ChevronRight className="h-4 w-4 text-accent" />
-            </button>
+            </Link>
 
-            {categoryFilters.map((category) => (
-              <button
-                key={category.handle}
-                type="button"
-                onClick={() => updateSearch({ category: category.handle })}
-                className={`mt-2 flex w-full items-center justify-between border px-4 py-4 text-left transition-colors ${
-                  activeCategory === category.handle
-                    ? "border-accent bg-accent/10"
-                    : "border-transparent hover:border-rule hover:bg-background"
-                }`}
-              >
-                <span>
-                  <span className="block font-display text-sm font-bold uppercase tracking-tight">
-                    {category.label}
-                  </span>
-                  <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-                    {categoryDescriptions[category.handle] ?? category.description}
-                  </span>
-                </span>
-                <ChevronRight className="h-4 w-4 text-accent" />
-              </button>
-            ))}
+            {displayedCategoryGroups.map((category) => {
+              const parent = category.collections[0];
+              const children = category.collections.slice(1);
+              const expanded = expandedCategory === category.handle;
+              const groupActive = category.collections.some(
+                (collection) => collection.handle === activeCategory,
+              );
+
+              return (
+                <div key={category.handle} className="mt-2">
+                  <div
+                    className={`flex w-full items-stretch border transition-colors ${
+                      activeCategory === parent.handle
+                        ? "border-accent bg-accent/10"
+                        : groupActive
+                          ? "border-rule bg-background"
+                          : "border-transparent hover:border-rule hover:bg-background"
+                    }`}
+                  >
+                    <Link
+                      to="/products"
+                      search={getCatalogueSearch(parent.handle)}
+                      aria-current={activeCategory === parent.handle ? "page" : undefined}
+                      data-catalog-active={activeCategory === parent.handle}
+                      onClick={() => setExpandedCategory(category.handle)}
+                      className="min-w-0 flex-1 px-4 py-4 text-left"
+                    >
+                      <span className="block font-display text-sm font-bold uppercase tracking-tight">
+                        {parent.label}
+                      </span>
+                      <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+                        {presentation.get(parent.handle)?.description ?? categoryDescriptions[parent.handle] ?? parent.description}
+                      </span>
+                    </Link>
+                    <button
+                      type="button"
+                      aria-expanded={expanded}
+                      aria-controls={`catalogue-group-${category.handle}`}
+                      aria-label={`${expanded ? "Collapse" : "Expand"} ${parent.label}`}
+                      onClick={() => setExpandedCategory(expanded ? null : category.handle)}
+                      className="flex w-11 shrink-0 items-center justify-center text-accent hover:bg-accent/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
+                    >
+                      <ChevronRight
+                        className={`h-4 w-4 transition-transform ${expanded ? "rotate-90" : ""}`}
+                      />
+                    </button>
+                  </div>
+
+                  {expanded ? (
+                    <div id={`catalogue-group-${category.handle}`}>
+                      {children.map((collection) => (
+                        <Link
+                          key={collection.handle}
+                          to="/products"
+                          search={getCatalogueSearch(collection.handle)}
+                          aria-current={activeCategory === collection.handle ? "page" : undefined}
+                          data-catalog-active={activeCategory === collection.handle}
+                          className={`flex w-full items-center justify-between border border-t-0 px-4 py-2.5 pl-7 text-left transition-colors ${
+                            activeCategory === collection.handle
+                              ? "border-accent bg-accent/10"
+                              : "border-transparent hover:border-rule hover:bg-background"
+                          }`}
+                        >
+                          <span className="block font-display text-xs font-bold uppercase tracking-tight">
+                            {collection.label}
+                          </span>
+                          <ChevronRight className="h-4 w-4 shrink-0 text-accent" />
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
         </aside>
 
@@ -228,13 +323,15 @@ function ProductsCataloguePage() {
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-                    Showing <strong className="font-bold text-ink">{filteredProducts.length}</strong> of{" "}
+                    Showing{" "}
+                    <strong className="font-bold text-ink">{filteredProducts.length}</strong> of{" "}
                     <strong className="font-bold text-ink">{products.length}</strong> loaded
                   </span>
                   <span className="border border-accent/30 bg-accent/10 px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-accent">
                     {activeCategory === "all"
                       ? "All Products"
-                      : categoryFilters.find((category) => category.handle === activeCategory)?.label}
+                      : collectionFilters.find((category) => category.handle === activeCategory)
+                          ?.label}
                   </span>
                 </div>
               </div>
@@ -269,7 +366,9 @@ function ProductsCataloguePage() {
                     <select
                       aria-label="Sort products"
                       value={sort}
-                      onChange={(event) => updateSearch({ sort: event.target.value as typeof sort })}
+                      onChange={(event) =>
+                        updateSearch({ sort: event.target.value as typeof sort })
+                      }
                       className="min-w-0 flex-1 bg-transparent font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink focus:outline-none"
                     >
                       <option value="newest">Newest</option>
@@ -292,15 +391,18 @@ function ProductsCataloguePage() {
           ) : (
             <div className="mt-6 border border-dashed border-rule bg-surface px-4 py-10 text-center md:px-8 md:py-16">
               <h2 className="font-display text-xl font-bold uppercase tracking-tight md:text-2xl">
-                {products.length === 0 ? "Catalogue products are being updated" : "No products match these filters"}
+                {products.length === 0 ? productCopy.emptyTitle : productCopy.filteredEmptyTitle}
               </h2>
               <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-ink-muted md:mt-4">
-                {products.length === 0 ? "Contact our sales desk for availability, product identification, or a quotation while the online catalogue is updated." : "Adjust the filters or browse other categories."}
+                {products.length === 0 ? productCopy.emptyCopy : productCopy.filteredEmptyCopy}
               </p>
               <button
                 type="button"
                 onClick={() => {
-                  void navigate({ search: { category: "all", availability: "all", sort: "newest" }, replace: true });
+                  void navigate({
+                    search: { category: "all", availability: "all", sort: "newest" },
+                    replace: true,
+                  });
                 }}
                 className="mt-6 inline-flex h-11 items-center justify-center bg-accent px-6 font-mono text-[10px] uppercase tracking-[0.22em] text-accent-foreground md:mt-8"
               >
@@ -311,7 +413,11 @@ function ProductsCataloguePage() {
 
           {pageInfo.hasNextPage ? (
             <div className="mt-6 text-center">
-              {loadError ? <p role="alert" className="mb-3 text-sm text-red-700">{loadError}</p> : null}
+              {loadError ? (
+                <p role="alert" className="mb-3 text-sm text-red-700">
+                  {loadError}
+                </p>
+              ) : null}
               <button
                 type="button"
                 disabled={loadingMore}
@@ -319,8 +425,19 @@ function ProductsCataloguePage() {
                   setLoadingMore(true);
                   setLoadError("");
                   try {
-                    const next = await getPaginatedProducts({ data: { first: 48, after: pageInfo.endCursor ?? undefined } });
-                    setProducts((current) => [...current, ...next.products.filter((product) => !current.some((item) => item.id === product.id))]);
+                    const next = await getCatalogProductsPage({
+                      data: {
+                        first: 48,
+                        collectionHandle: activeCategory === "all" ? undefined : activeCategory,
+                        after: pageInfo.endCursor ?? undefined,
+                      },
+                    });
+                    setProducts((current) => [
+                      ...current,
+                      ...next.products.filter(
+                        (product) => !current.some((item) => item.id === product.id),
+                      ),
+                    ]);
                     setPageInfo(next.pageInfo);
                   } catch {
                     setLoadError("More products could not be loaded. Please try again.");
@@ -330,7 +447,7 @@ function ProductsCataloguePage() {
                 }}
                 className="inline-flex h-12 items-center justify-center border border-accent bg-surface px-7 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-accent hover:bg-accent hover:text-white disabled:opacity-60"
               >
-                {loadingMore ? "Loading products" : "Load more products"}
+                {loadingMore ? "Loading products" : messages["catalogue.loadMore"]}
               </button>
             </div>
           ) : null}
@@ -341,7 +458,8 @@ function ProductsCataloguePage() {
             </div>
             <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <p className="max-w-2xl text-sm leading-relaxed text-white/50">
-                Trouble finding the right part? Send a part number, manufacturer reference, or photo.
+                Trouble finding the right part? Send a part number, manufacturer reference, or
+                photo.
               </p>
               <Link
                 to="/contact-us"
